@@ -89,11 +89,11 @@ export default function AnalysePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold font-grotesk text-off-white flex items-center gap-2">
+        <h1 className="text-2xl font-bold font-grotesk text-foreground flex items-center gap-2">
           <Brain className="w-6 h-6 text-blue-light" />
           Tender Analyse
         </h1>
-        <p className="text-slate-ai text-sm mt-1">
+        <p className="text-muted text-sm mt-1">
           Selecteer een tender en start een AI-analyse voor bid/no-bid aanbeveling
         </p>
       </div>
@@ -101,13 +101,13 @@ export default function AnalysePage() {
       {/* Tender selector */}
       <div className="card p-5 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-off-white mb-1.5">
+          <label className="block text-sm font-medium text-foreground mb-1.5">
             Selecteer tender
           </label>
           <select
             value={selectedId}
             onChange={(e) => handleSelect(e.target.value)}
-            className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white focus:outline-none focus:border-ai-blue"
+            className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:border-ai-blue"
             aria-label="Selecteer een tender om te analyseren"
           >
             <option value="">-- Kies een tender --</option>
@@ -151,8 +151,8 @@ export default function AnalysePage() {
           <div className="animate-pulse-glow inline-flex p-4 bg-ai-blue/15 rounded-full mb-4">
             <Brain className="w-8 h-8 text-blue-light" />
           </div>
-          <p className="text-off-white font-medium">Claude analyseert de tender...</p>
-          <p className="text-slate-ai text-sm mt-1">
+          <p className="text-foreground font-medium">Claude analyseert de tender...</p>
+          <p className="text-muted text-sm mt-1">
             Dit kan 15-30 seconden duren
           </p>
         </div>
@@ -164,8 +164,8 @@ export default function AnalysePage() {
 
       {!selectedId && (
         <div className="text-center py-16">
-          <Search className="w-12 h-12 text-slate-ai mx-auto mb-3 opacity-40" />
-          <p className="text-slate-ai">
+          <Search className="w-12 h-12 text-muted mx-auto mb-3 opacity-40" />
+          <p className="text-muted">
             Selecteer een tender om de analyse te starten
           </p>
         </div>

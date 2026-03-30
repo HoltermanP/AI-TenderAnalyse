@@ -17,8 +17,11 @@ export const metadata: Metadata = {
 }
 
 async function DashboardStats() {
-  let tenders: (Tender & { analysis_score?: number; analysis_rec?: string })[] =
-    []
+  let tenders: (Tender & {
+    analysis_score?: number
+    analysis_rec?: string
+    attachment_count?: number
+  })[] = []
   let stats = {
     total: 0,
     active: 0,
@@ -29,9 +32,16 @@ async function DashboardStats() {
 
   try {
     const rows = await sql`
-      SELECT t.*, a.score as analysis_score, a.recommendation as analysis_rec
+      SELECT t.*, la.score AS analysis_score, la.recommendation AS analysis_rec,
+             (SELECT COUNT(*)::int FROM documents d WHERE d.tender_id = t.id) AS attachment_count
       FROM tenders t
-      LEFT JOIN analyses a ON a.tender_id = t.id
+      LEFT JOIN LATERAL (
+        SELECT score, recommendation
+        FROM analyses
+        WHERE tender_id = t.id
+        ORDER BY created_at DESC NULLS LAST
+        LIMIT 1
+      ) la ON true
       ORDER BY t.created_at DESC
       LIMIT 6
     `
@@ -39,13 +49,12 @@ async function DashboardStats() {
 
     const statsRows = await sql`
       SELECT
-        COUNT(*) as total,
-        COUNT(*) FILTER (WHERE status IN ('new', 'in_progress')) as active,
-        COUNT(*) FILTER (WHERE status = 'analysed') as analysed,
-        COUNT(*) FILTER (WHERE status = 'won') as won,
-        ROUND(AVG(a.score)) as avg_score
+        COUNT(*)::bigint AS total,
+        COUNT(*) FILTER (WHERE t.status IN ('new', 'in_progress')) AS active,
+        COUNT(*) FILTER (WHERE t.status = 'analysed') AS analysed,
+        COUNT(*) FILTER (WHERE t.status = 'won') AS won,
+        (SELECT ROUND(AVG(score))::int FROM analyses WHERE score IS NOT NULL) AS avg_score
       FROM tenders t
-      LEFT JOIN analyses a ON a.tender_id = t.id
     `
     const s = statsRows[0] as typeof stats & { avg_score?: number }
     stats = {
@@ -105,8 +114,8 @@ async function DashboardStats() {
         <CardContent>
           {recentTenders.length === 0 ? (
             <div className="text-center py-12">
-              <BarChart3 className="w-12 h-12 text-slate-ai mx-auto mb-3 opacity-40" />
-              <p className="text-slate-ai text-sm mb-4">
+              <BarChart3 className="w-12 h-12 text-muted mx-auto mb-3 opacity-40" />
+              <p className="text-muted text-sm mb-4">
                 Nog geen tenders. Import van TenderNed of voeg handmatig toe.
               </p>
               <div className="flex justify-center gap-3">
@@ -123,6 +132,7 @@ async function DashboardStats() {
                 <TenderCard
                   key={tender.id}
                   tender={tender}
+                  attachmentCount={Number(tender.attachment_count ?? 0)}
                   analysis={
                     tender.analysis_score != null
                       ? ({
@@ -145,10 +155,10 @@ async function DashboardStats() {
             <TrendingUp className="w-5 h-5 text-blue-light" />
           </div>
           <div>
-            <h3 className="font-semibold text-off-white group-hover:text-blue-light transition-colors">
+            <h3 className="font-semibold text-foreground group-hover:text-blue-light transition-colors">
               TenderNed sync
             </h3>
-            <p className="text-sm text-slate-ai mt-1">
+            <p className="text-sm text-muted mt-1">
               Haal nieuwe tenders op van TenderNed
             </p>
           </div>
@@ -159,10 +169,10 @@ async function DashboardStats() {
             <Target className="w-5 h-5 text-velocity-red" />
           </div>
           <div>
-            <h3 className="font-semibold text-off-white group-hover:text-blue-light transition-colors">
+            <h3 className="font-semibold text-foreground group-hover:text-blue-light transition-colors">
               Analyse starten
             </h3>
-            <p className="text-sm text-slate-ai mt-1">
+            <p className="text-sm text-muted mt-1">
               Analyseer een tender met AI
             </p>
           </div>
@@ -173,10 +183,10 @@ async function DashboardStats() {
             <Clock className="w-5 h-5 text-amber-400" />
           </div>
           <div>
-            <h3 className="font-semibold text-off-white group-hover:text-blue-light transition-colors">
+            <h3 className="font-semibold text-foreground group-hover:text-blue-light transition-colors">
               Lessons Learned
             </h3>
-            <p className="text-sm text-slate-ai mt-1">
+            <p className="text-sm text-muted mt-1">
               Voeg feedback toe uit afgeronde tenders
             </p>
           </div>
@@ -191,10 +201,10 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold font-grotesk text-off-white">
+        <h1 className="text-2xl font-bold font-grotesk text-foreground">
           Dashboard
         </h1>
-        <p className="text-slate-ai text-sm mt-1">
+        <p className="text-muted text-sm mt-1">
           Overzicht van je tender pipeline en AI analyses
         </p>
       </div>

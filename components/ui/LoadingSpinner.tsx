@@ -28,7 +28,7 @@ export function LoadingSpinner({
         aria-label={label ?? 'Laden...'}
       />
       {label && (
-        <p className="text-sm text-slate-ai font-mono">{label}</p>
+        <p className="text-sm text-muted font-mono">{label}</p>
       )}
     </div>
   )

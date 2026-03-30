@@ -46,11 +46,11 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
         <div className="h-16 flex items-center justify-between px-5 border-b border-border-subtle">
           <span className="text-lg font-bold font-grotesk">
             <span className="text-blue-light">AI</span>
-            <span className="text-off-white">-Tender</span>
+            <span className="text-foreground">-Tender</span>
           </span>
           <button
             onClick={onClose}
-            className="text-slate-ai hover:text-off-white"
+            className="text-muted hover:text-foreground"
             aria-label="Menu sluiten"
           >
             <X className="w-5 h-5" />
@@ -72,7 +72,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                   'flex items-center gap-3 px-4 py-3 mx-2 rounded-md text-sm font-medium transition-colors',
                   active
                     ? 'bg-ai-blue/15 text-blue-light border border-ai-blue/20'
-                    : 'text-slate-ai hover:text-off-white hover:bg-surface'
+                    : 'text-muted hover:text-foreground hover:bg-surface'
                 )}
               >
                 <item.icon className="w-4 h-4 flex-shrink-0" />
@@ -83,7 +83,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
         </div>
 
         <div className="p-4 border-t border-border-subtle">
-          <p className="text-center text-[10px] font-mono text-slate-ai/50 tracking-widest">
+          <p className="text-center text-[10px] font-mono text-muted/50 tracking-widest">
             AI-FIRST · WE SHIP FAST
           </p>
         </div>

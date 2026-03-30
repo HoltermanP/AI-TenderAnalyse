@@ -25,10 +25,10 @@ function ListSection({
   if (!items?.length) return null
   return (
     <div>
-      <h4 className="text-sm font-semibold text-off-white mb-2">{title}</h4>
+      <h4 className="text-sm font-semibold text-foreground mb-2">{title}</h4>
       <ul className="space-y-1.5">
         {items.map((item, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm text-slate-ai">
+          <li key={i} className="flex items-start gap-2 text-sm text-muted">
             <Icon
               className={`w-4 h-4 flex-shrink-0 mt-0.5 ${iconColor}`}
               aria-hidden="true"
@@ -76,12 +76,12 @@ export function AnalysisPanel({ analysis }: AnalysisPanelProps) {
             </Badge>
           </div>
           {analysis.summary && (
-            <p className="text-sm text-slate-ai leading-relaxed">
+            <p className="text-sm text-muted leading-relaxed">
               {analysis.summary}
             </p>
           )}
           {analysis.effort_estimate && (
-            <p className="text-xs text-slate-ai mt-2 font-mono">
+            <p className="text-xs text-muted mt-2 font-mono">
               Inspanning: {analysis.effort_estimate}
             </p>
           )}

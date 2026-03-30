@@ -12,6 +12,13 @@
   --off-white: #F4F6FA;
   --slate: #6B82A8;
   --border-subtle: #1E1E28;
+  /* Default = dark; html.light / .medium overschrijft */
+  --bg-primary: #0A0A0B;
+  --bg-surface: #111116;
+  --bg-elevated: #161620;
+  --text-primary: #F4F6FA;
+  --text-secondary: #6B82A8;
+  --border-color: #1E1E28;
 }
 
 /* Dark theme (default) */
@@ -44,8 +51,8 @@ html.light {
   --bg-primary: #F0F2F8;
   --bg-surface: #FFFFFF;
   --bg-elevated: #F8F9FC;
-  --text-primary: #0A0A0B;
-  --text-secondary: #4A5568;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
   --border-color: #E2E8F0;
 }
 
@@ -120,7 +127,7 @@ html.light {
 
   /* Focus styles */
   .focus-ring {
-    @apply outline-none ring-2 ring-blue-light ring-offset-2 ring-offset-deep-black;
+    @apply outline-none ring-2 ring-blue-light ring-offset-2 ring-offset-[var(--bg-primary)];
   }
 
   /* Score badge */
@@ -146,10 +153,6 @@ html.light {
     border: 1px solid var(--border-color, #1E1E28);
   }
 
-  .bg-surface {
-    background-color: var(--bg-surface, #111116);
-  }
-
   .bg-primary {
     background-color: var(--bg-primary, #0A0A0B);
   }
@@ -160,6 +163,10 @@ html.light {
 
   .text-secondary {
     color: var(--text-secondary, #6B82A8);
+  }
+
+  .bg-surface-glass {
+    background-color: color-mix(in srgb, var(--bg-surface) 55%, transparent);
   }
 }
 

@@ -1,21 +1,60 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { searchTenders, getMockTenders } from '@/lib/tenderned'
+import {
+  buildTnsListFilters,
+  fetchPublicationsPage,
+  getDefaultListPageSize,
+  getPublicationAsTender,
+  mapListItemToTender,
+} from '@/lib/tenderned'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const query = searchParams.get('q') ?? undefined
-  const category = searchParams.get('category') ?? undefined
+  const publicatieIdRaw = searchParams.get('publicatieId')
+  const pageRaw = searchParams.get('page')
+  const sizeRaw = searchParams.get('size')
+  const cpvRaw = searchParams.get('cpv')
+  const qRaw = searchParams.get('q') ?? searchParams.get('search')
 
   try {
-    if (process.env.TENDERNED_API_KEY) {
-      const result = await searchTenders({ query, category, page_size: 20 })
-      return NextResponse.json(result)
+    if (publicatieIdRaw) {
+      const publicatieId = Number(publicatieIdRaw)
+      if (!Number.isFinite(publicatieId) || publicatieId <= 0) {
+        return NextResponse.json(
+          { error: 'Ongeldige publicatieId' },
+          { status: 400 }
+        )
+      }
+      const tender = await getPublicationAsTender(publicatieId)
+      return NextResponse.json({
+        results: [tender],
+        total: 1,
+        page: 0,
+        totalPages: 1,
+      })
     }
 
-    // Mock data when no API key
-    const mock = getMockTenders()
-    return NextResponse.json({ results: mock, total: mock.length, page: 1 })
+    const page = Math.max(0, Number(pageRaw ?? 0) || 0)
+    const size = Math.min(
+      100,
+      Math.max(1, Number(sizeRaw ?? getDefaultListPageSize()) || 20)
+    )
+
+    const listFilters = buildTnsListFilters({
+      cpvCodes: cpvRaw?.trim() ? cpvRaw : undefined,
+      search: qRaw?.trim() ? qRaw : undefined,
+    })
+
+    const data = await fetchPublicationsPage(page, size, listFilters)
+    const results = (data.content ?? []).map(mapListItemToTender)
+    return NextResponse.json({
+      results,
+      page: data.number,
+      totalPages: data.totalPages,
+      totalElements: data.totalElements,
+      size: data.size,
+      filters: listFilters ?? null,
+    })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'TenderNed fout'
     return NextResponse.json({ error: message }, { status: 500 })

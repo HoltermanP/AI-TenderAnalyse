@@ -23,10 +23,10 @@ export function Topbar({ title, onMobileMenuToggle }: TopbarProps) {
   ]
 
   return (
-    <header className="h-16 border-b border-border-subtle bg-surface/50 backdrop-blur-sm flex items-center px-6 gap-4 sticky top-0 z-40">
+    <header className="h-16 border-b border-border-subtle bg-surface-glass backdrop-blur-sm flex items-center px-6 gap-4 sticky top-0 z-40">
       {/* Mobile menu button */}
       <button
-        className="md:hidden text-slate-ai hover:text-off-white"
+        className="md:hidden text-muted hover:text-foreground"
         onClick={onMobileMenuToggle}
         aria-label="Menu openen"
       >
@@ -35,7 +35,7 @@ export function Topbar({ title, onMobileMenuToggle }: TopbarProps) {
 
       {/* Title */}
       {title && (
-        <h1 className="text-lg font-semibold font-grotesk text-off-white hidden md:block">
+        <h1 className="text-lg font-semibold font-grotesk text-foreground hidden md:block">
           {title}
         </h1>
       )}
@@ -52,7 +52,7 @@ export function Topbar({ title, onMobileMenuToggle }: TopbarProps) {
               'p-1.5 rounded transition-colors',
               theme === opt.value
                 ? 'bg-ai-blue text-white'
-                : 'text-slate-ai hover:text-off-white'
+                : 'text-muted hover:text-foreground'
             )}
             aria-label={`${opt.label} thema`}
             title={opt.label}
@@ -66,7 +66,7 @@ export function Topbar({ title, onMobileMenuToggle }: TopbarProps) {
       <div className="relative">
         <button
           onClick={() => setNotifOpen((o) => !o)}
-          className="relative text-slate-ai hover:text-off-white p-2 rounded-md hover:bg-surface transition-colors"
+          className="relative text-muted hover:text-foreground p-2 rounded-md hover:bg-surface transition-colors"
           aria-label="Meldingen"
         >
           <Bell className="w-5 h-5" />
@@ -74,8 +74,8 @@ export function Topbar({ title, onMobileMenuToggle }: TopbarProps) {
 
         {notifOpen && (
           <div className="absolute right-0 top-12 w-72 card-elevated border border-border-subtle rounded-lg shadow-xl p-4 z-50">
-            <p className="text-sm font-medium text-off-white mb-3">Meldingen</p>
-            <p className="text-xs text-slate-ai text-center py-4">
+            <p className="text-sm font-medium text-foreground mb-3">Meldingen</p>
+            <p className="text-xs text-muted text-center py-4">
               Geen nieuwe meldingen
             </p>
           </div>

@@ -3,13 +3,13 @@ import { Home } from 'lucide-react'
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-deep-black flex items-center justify-center">
+    <div className="min-h-screen bg-primary flex items-center justify-center">
       <div className="text-center">
         <p className="font-mono text-blue-light text-6xl font-bold mb-4">404</p>
-        <h1 className="text-2xl font-bold font-grotesk text-off-white mb-2">
+        <h1 className="text-2xl font-bold font-grotesk text-foreground mb-2">
           Pagina niet gevonden
         </h1>
-        <p className="text-slate-ai mb-8">
+        <p className="text-muted mb-8">
           De pagina die je zoekt bestaat niet of is verplaatst.
         </p>
         <Link

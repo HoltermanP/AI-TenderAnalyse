@@ -48,7 +48,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
       <body
-        className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} font-grotesk antialiased bg-deep-black text-off-white`}
+        className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} font-grotesk antialiased bg-primary text-foreground`}
       >
         <ThemeProvider>{children}</ThemeProvider>
       </body>

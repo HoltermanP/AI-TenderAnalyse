@@ -10,15 +10,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        'deep-black': '#0A0A0B',
-        'surface': '#111116',
+        'deep-black': 'var(--bg-primary, #0A0A0B)',
+        'surface': 'var(--bg-surface, #111116)',
         'navy': '#0D1428',
         'ai-blue': '#2D6FE8',
         'blue-light': '#4B8EFF',
         'velocity-red': '#FF4D1C',
         'off-white': '#F4F6FA',
         'slate-ai': '#6B82A8',
-        'border-subtle': '#1E1E28',
+        'border-subtle': 'var(--border-color, #1E1E28)',
+        foreground: 'var(--text-primary, #F4F6FA)',
+        muted: 'var(--text-secondary, #6B82A8)',
       },
       fontFamily: {
         grotesk: ['var(--font-space-grotesk)', 'sans-serif'],

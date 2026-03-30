@@ -127,16 +127,16 @@ export function FileUpload({
         <Upload
           className={cn(
             'w-10 h-10 mx-auto mb-3 transition-colors',
-            isDragActive ? 'text-ai-blue' : 'text-slate-ai'
+            isDragActive ? 'text-ai-blue' : 'text-muted'
           )}
           aria-hidden="true"
         />
-        <p className="text-sm font-medium text-off-white mb-1">
+        <p className="text-sm font-medium text-foreground mb-1">
           {isDragActive
             ? 'Laat los om te uploaden'
             : 'Sleep bestanden hierheen of klik om te selecteren'}
         </p>
-        <p className="text-xs text-slate-ai">
+        <p className="text-xs text-muted">
           PDF, Word, Excel · Max 10 MB per bestand
         </p>
       </div>
@@ -154,8 +154,8 @@ export function FileUpload({
               </span>
 
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-off-white truncate">{file.name}</p>
-                <p className="text-xs text-slate-ai">{formatFileSize(file.size)}</p>
+                <p className="text-sm text-foreground truncate">{file.name}</p>
+                <p className="text-xs text-muted">{formatFileSize(file.size)}</p>
               </div>
 
               <div className="flex items-center gap-2">
@@ -173,7 +173,7 @@ export function FileUpload({
                 )}
                 <button
                   onClick={() => removeFile(file.id)}
-                  className="text-slate-ai hover:text-velocity-red transition-colors"
+                  className="text-muted hover:text-velocity-red transition-colors"
                   aria-label={`Verwijder ${file.name}`}
                 >
                   <X className="w-4 h-4" />

@@ -28,7 +28,7 @@ export function sql(
 // Type definitions matching database schema
 export interface Tender {
   id: string
-  external_id: string
+  external_id: string | null
   title: string
   description: string | null
   contracting_authority: string | null
@@ -76,6 +76,9 @@ export interface Document {
   type: string
   size: number
   blob_url: string
+  summary: string | null
+  source: 'upload' | 'tenderned'
+  external_document_id: string | null
   created_at: string
 }
 

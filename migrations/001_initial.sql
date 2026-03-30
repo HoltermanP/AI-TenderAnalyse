@@ -21,9 +21,10 @@ CREATE TABLE IF NOT EXISTS company_info (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Insert default company info row
-INSERT INTO company_info (name) VALUES ('Mijn Bedrijf')
-ON CONFLICT DO NOTHING;
+-- Insert default company info row (idempotent)
+INSERT INTO company_info (name)
+SELECT 'Mijn Bedrijf'
+WHERE NOT EXISTS (SELECT 1 FROM company_info LIMIT 1);
 
 -- Tenders
 CREATE TABLE IF NOT EXISTS tenders (
@@ -151,22 +152,27 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_tenders_updated_at ON tenders;
 CREATE TRIGGER update_tenders_updated_at
   BEFORE UPDATE ON tenders
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_analyses_updated_at ON analyses;
 CREATE TRIGGER update_analyses_updated_at
   BEFORE UPDATE ON analyses
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_chat_sessions_updated_at ON chat_sessions;
 CREATE TRIGGER update_chat_sessions_updated_at
   BEFORE UPDATE ON chat_sessions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_lessons_learned_updated_at ON lessons_learned;
 CREATE TRIGGER update_lessons_learned_updated_at
   BEFORE UPDATE ON lessons_learned
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_company_info_updated_at ON company_info;
 CREATE TRIGGER update_company_info_updated_at
   BEFORE UPDATE ON company_info
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

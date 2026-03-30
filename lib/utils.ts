@@ -116,6 +116,35 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+const MIME_TO_EXT: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'text/plain': 'txt',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+}
+
+/**
+ * Splits een bestandsnaam in weergavetitel en extensie (zonder punt).
+ * Ontbreekt een extensie in de naam, dan wordt die afgeleid uit het MIME-type indien mogelijk.
+ */
+export function filenameTitleAndExtension(
+  filename: string,
+  mimeType?: string
+): { title: string; extension: string } {
+  const trimmed = filename.trim()
+  const lastDot = trimmed.lastIndexOf('.')
+  if (lastDot > 0 && lastDot < trimmed.length - 1) {
+    return {
+      title: trimmed.slice(0, lastDot),
+      extension: trimmed.slice(lastDot + 1).toLowerCase(),
+    }
+  }
+  const fromMime = mimeType ? MIME_TO_EXT[mimeType] ?? '' : ''
+  return { title: trimmed || filename, extension: fromMime }
+}
+
 export function generateSessionId(): string {
   return `session_${Date.now()}_${Math.random().toString(36).slice(2)}`
 }

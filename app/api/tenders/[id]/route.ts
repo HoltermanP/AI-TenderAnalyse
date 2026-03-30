@@ -23,9 +23,15 @@ export async function GET(
 ) {
   try {
     const rows = await sql`
-      SELECT t.*, a.score, a.recommendation, a.summary, a.win_probability
+      SELECT t.*, la.score, la.recommendation, la.summary, la.win_probability
       FROM tenders t
-      LEFT JOIN analyses a ON a.tender_id = t.id
+      LEFT JOIN LATERAL (
+        SELECT score, recommendation, summary, win_probability
+        FROM analyses
+        WHERE tender_id = t.id
+        ORDER BY created_at DESC NULLS LAST
+        LIMIT 1
+      ) la ON true
       WHERE t.id = ${params.id}
     `
 

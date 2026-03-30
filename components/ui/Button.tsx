@@ -28,9 +28,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         'bg-ai-blue hover:bg-blue-light text-white',
       cta: 'bg-velocity-red hover:bg-red-500 text-white',
       outline:
-        'border border-off-white/20 hover:border-off-white/40 bg-transparent text-off-white',
+        'border border-foreground/20 hover:border-foreground/40 bg-transparent text-foreground',
       ghost:
-        'bg-transparent hover:bg-surface text-off-white',
+        'bg-transparent hover:bg-surface text-foreground',
       danger: 'bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-800/50',
     }
 

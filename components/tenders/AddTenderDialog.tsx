@@ -57,12 +57,12 @@ export function AddTenderDialog() {
 
           <div className="relative w-full max-w-lg card-elevated border border-border-subtle rounded-xl p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-semibold font-grotesk text-off-white">
+              <h2 className="text-lg font-semibold font-grotesk text-foreground">
                 Tender toevoegen
               </h2>
               <button
                 onClick={() => setOpen(false)}
-                className="text-slate-ai hover:text-off-white"
+                className="text-muted hover:text-foreground"
                 aria-label="Sluiten"
               >
                 <X className="w-5 h-5" />
@@ -73,7 +73,7 @@ export function AddTenderDialog() {
               <div>
                 <label
                   htmlFor="title"
-                  className="block text-sm font-medium text-off-white mb-1.5"
+                  className="block text-sm font-medium text-foreground mb-1.5"
                 >
                   Titel <span className="text-velocity-red">*</span>
                 </label>
@@ -81,7 +81,7 @@ export function AddTenderDialog() {
                   id="title"
                   name="title"
                   required
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                   placeholder="Naam van de tender"
                 />
               </div>
@@ -89,14 +89,14 @@ export function AddTenderDialog() {
               <div>
                 <label
                   htmlFor="contracting_authority"
-                  className="block text-sm font-medium text-off-white mb-1.5"
+                  className="block text-sm font-medium text-foreground mb-1.5"
                 >
                   Aanbestedende dienst
                 </label>
                 <input
                   id="contracting_authority"
                   name="contracting_authority"
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                   placeholder="Gemeente, Ministerie, etc."
                 />
               </div>
@@ -105,7 +105,7 @@ export function AddTenderDialog() {
                 <div>
                   <label
                     htmlFor="deadline"
-                    className="block text-sm font-medium text-off-white mb-1.5"
+                    className="block text-sm font-medium text-foreground mb-1.5"
                   >
                     Deadline
                   </label>
@@ -113,13 +113,13 @@ export function AddTenderDialog() {
                     id="deadline"
                     name="deadline"
                     type="date"
-                    className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white focus:outline-none focus:border-ai-blue"
+                    className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:border-ai-blue"
                   />
                 </div>
                 <div>
                   <label
                     htmlFor="value"
-                    className="block text-sm font-medium text-off-white mb-1.5"
+                    className="block text-sm font-medium text-foreground mb-1.5"
                   >
                     Waarde (€)
                   </label>
@@ -128,7 +128,7 @@ export function AddTenderDialog() {
                     name="value"
                     type="number"
                     min="0"
-                    className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+                    className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                     placeholder="100000"
                   />
                 </div>
@@ -137,14 +137,14 @@ export function AddTenderDialog() {
               <div>
                 <label
                   htmlFor="category"
-                  className="block text-sm font-medium text-off-white mb-1.5"
+                  className="block text-sm font-medium text-foreground mb-1.5"
                 >
                   Categorie
                 </label>
                 <input
                   id="category"
                   name="category"
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                   placeholder="IT, Bouw, Diensten..."
                 />
               </div>
@@ -152,7 +152,7 @@ export function AddTenderDialog() {
               <div>
                 <label
                   htmlFor="description"
-                  className="block text-sm font-medium text-off-white mb-1.5"
+                  className="block text-sm font-medium text-foreground mb-1.5"
                 >
                   Beschrijving
                 </label>
@@ -160,7 +160,7 @@ export function AddTenderDialog() {
                   id="description"
                   name="description"
                   rows={3}
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue resize-none"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue resize-none"
                   placeholder="Korte beschrijving van de tender..."
                 />
               </div>
@@ -168,7 +168,7 @@ export function AddTenderDialog() {
               <div>
                 <label
                   htmlFor="url"
-                  className="block text-sm font-medium text-off-white mb-1.5"
+                  className="block text-sm font-medium text-foreground mb-1.5"
                 >
                   URL
                 </label>
@@ -176,7 +176,7 @@ export function AddTenderDialog() {
                   id="url"
                   name="url"
                   type="url"
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                   placeholder="https://www.tenderned.nl/..."
                 />
               </div>

@@ -25,7 +25,7 @@ function OutcomeIcon({ outcome }: { outcome: Outcome }) {
     return <ThumbsUp className="w-4 h-4 text-green-400" />
   if (outcome === 'negative')
     return <ThumbsDown className="w-4 h-4 text-velocity-red" />
-  return <Minus className="w-4 h-4 text-slate-ai" />
+  return <Minus className="w-4 h-4 text-muted" />
 }
 
 function outcomeVariant(outcome: Outcome): 'success' | 'danger' | 'neutral' {
@@ -110,11 +110,11 @@ export default function LessonsLearnedPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-grotesk text-off-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold font-grotesk text-foreground flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-blue-light" />
             Lessons Learned
           </h1>
-          <p className="text-slate-ai text-sm mt-1">
+          <p className="text-muted text-sm mt-1">
             Kennis uit eerdere tenders — gebruikt bij toekomstige analyses
           </p>
         </div>
@@ -131,10 +131,10 @@ export default function LessonsLearnedPage() {
       {showForm && (
         <Card className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-off-white">Nieuwe lesson learned</h2>
+            <h2 className="font-semibold text-foreground">Nieuwe lesson learned</h2>
             <button
               onClick={() => setShowForm(false)}
-              className="text-slate-ai hover:text-off-white"
+              className="text-muted hover:text-foreground"
               aria-label="Sluiten"
             >
               <X className="w-4 h-4" />
@@ -144,19 +144,19 @@ export default function LessonsLearnedPage() {
           <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-off-white mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Titel <span className="text-velocity-red">*</span>
                 </label>
                 <input
                   required
                   value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                   placeholder="Samenvatting van de les"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-off-white mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Uitkomst
                 </label>
                 <select
@@ -164,7 +164,7 @@ export default function LessonsLearnedPage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, outcome: e.target.value as Outcome }))
                   }
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:border-ai-blue"
                 >
                   <option value="positive">Positief ✓</option>
                   <option value="neutral">Neutraal —</option>
@@ -174,7 +174,7 @@ export default function LessonsLearnedPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-off-white mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Beschrijving <span className="text-velocity-red">*</span>
               </label>
               <textarea
@@ -184,14 +184,14 @@ export default function LessonsLearnedPage() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, description: e.target.value }))
                 }
-                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue resize-none"
+                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue resize-none"
                 placeholder="Wat heb je geleerd? Wat ging goed of fout?"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-off-white mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Categorie
                 </label>
                 <input
@@ -199,12 +199,12 @@ export default function LessonsLearnedPage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, category: e.target.value }))
                   }
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                   placeholder="Prijs, Kwaliteit, Proces..."
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-off-white mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Tags (komma-gescheiden)
                 </label>
                 <input
@@ -212,7 +212,7 @@ export default function LessonsLearnedPage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, tags: e.target.value }))
                   }
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                   placeholder="overheid, IT, prijs"
                 />
               </div>
@@ -243,7 +243,7 @@ export default function LessonsLearnedPage() {
             className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
               filterOutcome === o
                 ? 'bg-ai-blue text-white'
-                : 'bg-surface border border-border-subtle text-slate-ai hover:text-off-white'
+                : 'bg-surface border border-border-subtle text-muted hover:text-foreground'
             }`}
           >
             {o === '' ? 'Alles' : o === 'positive' ? 'Positief' : o === 'negative' ? 'Negatief' : 'Neutraal'}
@@ -258,8 +258,8 @@ export default function LessonsLearnedPage() {
         </div>
       ) : lessons.length === 0 ? (
         <div className="text-center py-16">
-          <BookOpen className="w-12 h-12 text-slate-ai mx-auto mb-3 opacity-40" />
-          <p className="text-slate-ai text-sm">
+          <BookOpen className="w-12 h-12 text-muted mx-auto mb-3 opacity-40" />
+          <p className="text-muted text-sm">
             Nog geen lessons learned — voeg er een toe
           </p>
         </div>
@@ -274,7 +274,7 @@ export default function LessonsLearnedPage() {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-medium text-off-white">{lesson.title}</h3>
+                  <h3 className="font-medium text-foreground">{lesson.title}</h3>
                   <Badge variant={outcomeVariant(lesson.outcome)}>
                     {lesson.outcome === 'positive'
                       ? 'Positief'
@@ -283,24 +283,24 @@ export default function LessonsLearnedPage() {
                       : 'Neutraal'}
                   </Badge>
                 </div>
-                <p className="text-sm text-slate-ai mt-1 leading-relaxed">
+                <p className="text-sm text-muted mt-1 leading-relaxed">
                   {lesson.description}
                 </p>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   {lesson.category && (
-                    <span className="text-xs text-slate-ai font-mono">
+                    <span className="text-xs text-muted font-mono">
                       {lesson.category}
                     </span>
                   )}
                   {lesson.tags?.map((tag) => (
                     <span
                       key={tag}
-                      className="text-xs bg-surface border border-border-subtle text-slate-ai px-1.5 py-0.5 rounded"
+                      className="text-xs bg-surface border border-border-subtle text-muted px-1.5 py-0.5 rounded"
                     >
                       #{tag}
                     </span>
                   ))}
-                  <span className="text-xs text-slate-ai ml-auto">
+                  <span className="text-xs text-muted ml-auto">
                     {formatDate(lesson.created_at)}
                   </span>
                 </div>
@@ -308,7 +308,7 @@ export default function LessonsLearnedPage() {
 
               <button
                 onClick={() => void handleDelete(lesson.id)}
-                className="opacity-0 group-hover:opacity-100 text-slate-ai hover:text-velocity-red transition-all"
+                className="opacity-0 group-hover:opacity-100 text-muted hover:text-velocity-red transition-all"
                 aria-label="Verwijder lesson learned"
               >
                 <X className="w-4 h-4" />

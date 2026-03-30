@@ -19,7 +19,7 @@ export function KpiCard({ label, value, unit, sub, className, color = 'blue' }: 
 
   return (
     <div className={cn('card p-5', className)}>
-      <p className="text-xs text-slate-ai font-mono uppercase tracking-widest mb-2">
+      <p className="text-xs text-muted font-mono uppercase tracking-widest mb-2">
         {label}
       </p>
       <div className="flex items-baseline gap-1.5">
@@ -27,11 +27,11 @@ export function KpiCard({ label, value, unit, sub, className, color = 'blue' }: 
           {value}
         </span>
         {unit && (
-          <span className="text-slate-ai text-sm font-mono">{unit}</span>
+          <span className="text-muted text-sm font-mono">{unit}</span>
         )}
       </div>
       {sub && (
-        <p className="text-xs text-slate-ai mt-1">{sub}</p>
+        <p className="text-xs text-muted mt-1">{sub}</p>
       )}
     </div>
   )

@@ -38,14 +38,15 @@ export async function POST(request: NextRequest) {
 
     // Save to database
     const rows = await sql`
-      INSERT INTO documents (tender_id, name, type, size, blob_url, summary)
+      INSERT INTO documents (tender_id, name, type, size, blob_url, summary, source)
       VALUES (
         ${tenderId ?? null},
         ${file.name},
         ${file.type},
         ${file.size},
         ${uploaded.url},
-        ${summary}
+        ${summary},
+        'upload'
       )
       RETURNING id, name, blob_url, created_at
     `

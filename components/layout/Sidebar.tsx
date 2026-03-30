@@ -73,7 +73,7 @@ export function Sidebar() {
         ) : (
           <span className="text-lg font-bold font-grotesk">
             <span className="text-blue-light">AI</span>
-            <span className="text-off-white">-Tender</span>
+            <span className="text-foreground">-Tender</span>
           </span>
         )}
       </div>
@@ -93,7 +93,7 @@ export function Sidebar() {
                 'flex items-center gap-3 px-4 py-2.5 mx-2 rounded-md text-sm font-medium transition-colors',
                 active
                   ? 'bg-ai-blue/15 text-blue-light border border-ai-blue/20'
-                  : 'text-slate-ai hover:text-off-white hover:bg-surface'
+                  : 'text-muted hover:text-foreground hover:bg-surface'
               )}
               aria-current={active ? 'page' : undefined}
               title={collapsed ? item.label : undefined}
@@ -109,7 +109,7 @@ export function Sidebar() {
       <div className="border-t border-border-subtle p-3">
         <button
           onClick={() => setCollapsed((c) => !c)}
-          className="flex items-center justify-center w-full py-2 text-slate-ai hover:text-off-white rounded-md transition-colors"
+          className="flex items-center justify-center w-full py-2 text-muted hover:text-foreground rounded-md transition-colors"
           aria-label={collapsed ? 'Sidebar uitklappen' : 'Sidebar inklappen'}
         >
           {collapsed ? (
@@ -122,7 +122,7 @@ export function Sidebar() {
           )}
         </button>
         {!collapsed && (
-          <p className="text-center text-[10px] font-mono text-slate-ai/50 mt-2 tracking-widest">
+          <p className="text-center text-[10px] font-mono text-muted/50 mt-2 tracking-widest">
             AI-FIRST · WE SHIP FAST
           </p>
         )}

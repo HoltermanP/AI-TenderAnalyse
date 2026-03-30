@@ -53,7 +53,7 @@ export function TenderFilters() {
       {/* Search */}
       <div className="relative flex-1 max-w-sm">
         <Search
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-ai"
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted"
           aria-hidden="true"
         />
         <input
@@ -61,7 +61,7 @@ export function TenderFilters() {
           placeholder="Zoek tenders..."
           defaultValue={searchParams.get('q') ?? ''}
           onChange={(e) => updateParam('q', e.target.value)}
-          className="w-full pl-9 pr-4 py-2 bg-surface border border-border-subtle rounded-md text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue transition-colors"
+          className="w-full pl-9 pr-4 py-2 bg-surface border border-border-subtle rounded-md text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue transition-colors"
           aria-label="Zoek tenders"
         />
       </div>
@@ -69,13 +69,13 @@ export function TenderFilters() {
       {/* Status filter */}
       <div className="relative">
         <SlidersHorizontal
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-ai pointer-events-none"
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none"
           aria-hidden="true"
         />
         <select
           value={searchParams.get('status') ?? ''}
           onChange={(e) => updateParam('status', e.target.value)}
-          className="pl-9 pr-8 py-2 bg-surface border border-border-subtle rounded-md text-sm text-off-white focus:outline-none focus:border-ai-blue appearance-none cursor-pointer transition-colors"
+          className="pl-9 pr-8 py-2 bg-surface border border-border-subtle rounded-md text-sm text-foreground focus:outline-none focus:border-ai-blue appearance-none cursor-pointer transition-colors"
           aria-label="Filter op status"
         >
           {STATUS_OPTIONS.map((opt) => (
@@ -90,7 +90,7 @@ export function TenderFilters() {
       <select
         value={searchParams.get('rec') ?? ''}
         onChange={(e) => updateParam('rec', e.target.value)}
-        className="px-3 py-2 bg-surface border border-border-subtle rounded-md text-sm text-off-white focus:outline-none focus:border-ai-blue appearance-none cursor-pointer transition-colors"
+        className="px-3 py-2 bg-surface border border-border-subtle rounded-md text-sm text-foreground focus:outline-none focus:border-ai-blue appearance-none cursor-pointer transition-colors"
         aria-label="Filter op aanbeveling"
       >
         {RECOMMENDATION_OPTIONS.map((opt) => (

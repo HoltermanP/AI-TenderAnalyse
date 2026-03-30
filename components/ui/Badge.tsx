@@ -9,7 +9,7 @@ interface BadgeProps {
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
   const variants = {
     default:
-      'bg-surface border border-border-subtle text-off-white',
+      'bg-surface border border-border-subtle text-foreground',
     success:
       'bg-green-900/30 border border-green-800/50 text-green-400',
     warning:
@@ -18,7 +18,7 @@ export function Badge({ children, variant = 'default', className }: BadgeProps) 
       'bg-red-900/30 border border-red-800/50 text-velocity-red',
     info: 'bg-blue-900/30 border border-blue-800/50 text-blue-light',
     neutral:
-      'bg-surface border border-border-subtle text-slate-ai',
+      'bg-surface border border-border-subtle text-muted',
   }
 
   return (

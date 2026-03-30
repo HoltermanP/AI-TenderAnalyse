@@ -152,7 +152,7 @@ export function ChatInterface({
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-48 text-center">
             <Bot className="w-12 h-12 text-ai-blue mb-3 opacity-60" />
-            <p className="text-slate-ai text-sm">
+            <p className="text-muted text-sm">
               Stel een vraag over een tender of vraag om analyse-hulp
             </p>
           </div>
@@ -187,7 +187,7 @@ export function ChatInterface({
                 'max-w-[80%] rounded-xl px-4 py-3 text-sm',
                 message.role === 'user'
                   ? 'bg-ai-blue text-white rounded-tr-sm'
-                  : 'bg-surface border border-border-subtle text-off-white rounded-tl-sm'
+                  : 'bg-surface border border-border-subtle text-foreground rounded-tl-sm'
               )}
             >
               {message.role === 'assistant' ? (
@@ -214,7 +214,7 @@ export function ChatInterface({
           {messages.length > 0 && (
             <button
               onClick={clearChat}
-              className="text-slate-ai hover:text-velocity-red transition-colors p-2 rounded-md"
+              className="text-muted hover:text-velocity-red transition-colors p-2 rounded-md"
               aria-label="Chat wissen"
               title="Chat wissen"
             >
@@ -228,7 +228,7 @@ export function ChatInterface({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             rows={1}
-            className="flex-1 resize-none bg-surface border border-border-subtle rounded-lg px-4 py-3 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue transition-colors min-h-[44px] max-h-32"
+            className="flex-1 resize-none bg-surface border border-border-subtle rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue transition-colors min-h-[44px] max-h-32"
             style={{ height: Math.min(32 + input.split('\n').length * 20, 128) }}
             aria-label="Chat bericht"
             disabled={isLoading}
@@ -243,7 +243,7 @@ export function ChatInterface({
             <Send className="w-4 h-4" />
           </Button>
         </div>
-        <p className="text-xs text-slate-ai mt-2 text-center">
+        <p className="text-xs text-muted mt-2 text-center">
           Enter om te versturen · Shift+Enter voor nieuwe regel
         </p>
       </div>

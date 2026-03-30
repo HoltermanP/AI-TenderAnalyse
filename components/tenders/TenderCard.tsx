@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Calendar, Euro, Building2, ExternalLink } from 'lucide-react'
+import { Calendar, Euro, Building2, ExternalLink, Paperclip } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { ScoreRing } from '@/components/ui/ScoreRing'
 import {
@@ -14,6 +14,8 @@ import type { Tender, Analysis } from '@/lib/db'
 interface TenderCardProps {
   tender: Tender
   analysis?: Analysis | null
+  /** Aantal gekoppelde documenten / bijlagen */
+  attachmentCount?: number
 }
 
 function getStatusVariant(
@@ -31,7 +33,7 @@ function getStatusVariant(
   return map[status] ?? 'neutral'
 }
 
-export function TenderCard({ tender, analysis }: TenderCardProps) {
+export function TenderCard({ tender, analysis, attachmentCount = 0 }: TenderCardProps) {
   const days = tender.deadline ? daysUntil(tender.deadline) : null
   const isUrgent = days !== null && days <= 7
 
@@ -43,11 +45,11 @@ export function TenderCard({ tender, analysis }: TenderCardProps) {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-off-white font-grotesk line-clamp-2 group-hover:text-blue-light transition-colors">
+          <h3 className="font-semibold text-foreground font-grotesk line-clamp-2 group-hover:text-blue-light transition-colors">
             {tender.title}
           </h3>
           {tender.contracting_authority && (
-            <div className="flex items-center gap-1.5 mt-1.5 text-slate-ai text-sm">
+            <div className="flex items-center gap-1.5 mt-1.5 text-muted text-sm">
               <Building2 className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
               <span className="truncate">{tender.contracting_authority}</span>
             </div>
@@ -59,7 +61,7 @@ export function TenderCard({ tender, analysis }: TenderCardProps) {
       </div>
 
       {/* Meta */}
-      <div className="flex flex-wrap gap-3 text-xs text-slate-ai">
+      <div className="flex flex-wrap gap-3 text-xs text-muted">
         {tender.deadline && (
           <div
             className={`flex items-center gap-1 ${isUrgent ? 'text-velocity-red' : ''}`}
@@ -81,8 +83,18 @@ export function TenderCard({ tender, analysis }: TenderCardProps) {
           </div>
         )}
         {tender.category && (
-          <span className="text-slate-ai">{tender.category}</span>
+          <span className="text-muted">{tender.category}</span>
         )}
+        <div className="flex items-center gap-1" title="Bijlagen">
+          <Paperclip className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+          <span>
+            {attachmentCount === 0
+              ? 'Geen bijlagen'
+              : attachmentCount === 1
+                ? '1 bijlage'
+                : `${attachmentCount} bijlagen`}
+          </span>
+        </div>
       </div>
 
       {/* Footer */}
@@ -107,7 +119,7 @@ export function TenderCard({ tender, analysis }: TenderCardProps) {
         </div>
         {tender.url && (
           <ExternalLink
-            className="w-3.5 h-3.5 text-slate-ai opacity-0 group-hover:opacity-100 transition-opacity"
+            className="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity"
             aria-hidden="true"
           />
         )}

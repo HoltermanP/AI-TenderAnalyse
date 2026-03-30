@@ -14,6 +14,7 @@ import {
   statusToLabel,
   fileTypeIcon,
   formatFileSize,
+  filenameTitleAndExtension,
 } from '@/lib/utils'
 import {
   Calendar,
@@ -23,9 +24,11 @@ import {
   Brain,
   FileText,
   Download,
+  Eye,
 } from 'lucide-react'
 import Link from 'next/link'
 import { StartAnalysisButton } from '@/components/analysis/StartAnalysisButton'
+import { TenderNedBijlagenToolbar } from '@/components/tenders/TenderNedBijlagenToolbar'
 import { GeneratePdfButton } from '@/components/pdf/GeneratePdfButton'
 import type { Metadata } from 'next'
 
@@ -77,7 +80,7 @@ export default async function TenderDetailPage({
       {/* Back */}
       <Link
         href="/dashboard/tenders"
-        className="text-sm text-slate-ai hover:text-off-white transition-colors"
+        className="text-sm text-muted hover:text-foreground transition-colors"
       >
         ← Terug naar tenders
       </Link>
@@ -93,11 +96,11 @@ export default async function TenderDetailPage({
               <Badge variant="neutral">TenderNed</Badge>
             )}
           </div>
-          <h1 className="text-2xl font-bold font-grotesk text-off-white leading-tight">
+          <h1 className="text-2xl font-bold font-grotesk text-foreground leading-tight">
             {tender.title}
           </h1>
 
-          <div className="flex flex-wrap gap-4 mt-3 text-sm text-slate-ai">
+          <div className="flex flex-wrap gap-4 mt-3 text-sm text-muted">
             {tender.contracting_authority && (
               <div className="flex items-center gap-1.5">
                 <Building2 className="w-4 h-4" />
@@ -134,7 +137,7 @@ export default async function TenderDetailPage({
               href={tender.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-slate-ai hover:text-off-white border border-border-subtle hover:border-off-white/20 px-3 py-2 rounded-md transition-colors"
+              className="flex items-center gap-2 text-sm text-muted hover:text-foreground border border-border-subtle hover:border-foreground/20 px-3 py-2 rounded-md transition-colors"
             >
               <ExternalLink className="w-4 h-4" />
               Origineel
@@ -152,7 +155,7 @@ export default async function TenderDetailPage({
             <CardTitle>Beschrijving</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-ai leading-relaxed whitespace-pre-wrap">
+            <p className="text-sm text-muted leading-relaxed whitespace-pre-wrap">
               {tender.description}
             </p>
           </CardContent>
@@ -166,7 +169,7 @@ export default async function TenderDetailPage({
           {/* Analysis */}
           {analysis ? (
             <div>
-              <h2 className="text-lg font-semibold font-grotesk text-off-white mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold font-grotesk text-foreground mb-4 flex items-center gap-2">
                 <Brain className="w-5 h-5 text-blue-light" />
                 AI Analyse
               </h2>
@@ -174,8 +177,8 @@ export default async function TenderDetailPage({
             </div>
           ) : (
             <Card className="text-center py-10">
-              <Brain className="w-12 h-12 text-slate-ai mx-auto mb-3 opacity-40" />
-              <p className="text-slate-ai text-sm mb-4">
+              <Brain className="w-12 h-12 text-muted mx-auto mb-3 opacity-40" />
+              <p className="text-muted text-sm mb-4">
                 Nog geen analyse beschikbaar
               </p>
               <StartAnalysisButton
@@ -186,37 +189,85 @@ export default async function TenderDetailPage({
             </Card>
           )}
 
-          {/* Documents */}
+          {/* Bijlagen */}
           <div>
-            <h2 className="text-lg font-semibold font-grotesk text-off-white mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold font-grotesk text-foreground mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-blue-light" />
-              Documenten
+              Bijlagen
+              {documents.length > 0 && (
+                <span className="text-sm font-normal text-muted">
+                  ({documents.length})
+                </span>
+              )}
             </h2>
+            <TenderNedBijlagenToolbar
+              tenderId={tender.id}
+              source={tender.source}
+              externalId={tender.external_id}
+              hasDocuments={documents.length > 0}
+            />
+
             <FileUpload tenderId={tender.id} />
 
             {documents.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {documents.map((doc) => (
-                  <div key={doc.id} className="card flex items-center gap-3 p-3">
-                    <span className="text-lg">{fileTypeIcon(doc.type)}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-off-white truncate">{doc.name}</p>
-                      <p className="text-xs text-slate-ai">
-                        {formatFileSize(doc.size)} · {formatDate(doc.created_at)}
-                      </p>
-                    </div>
-                    <a
-                      href={doc.blob_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-slate-ai hover:text-blue-light transition-colors"
-                      aria-label={`Download ${doc.name}`}
-                    >
-                      <Download className="w-4 h-4" />
-                    </a>
-                  </div>
-                ))}
-              </div>
+              <ul className="mt-4 space-y-2 list-none p-0 m-0" aria-label="Lijst van bijlagen">
+                {documents.map((doc) => {
+                  const { title, extension } = filenameTitleAndExtension(
+                    doc.name,
+                    doc.type
+                  )
+                  return (
+                    <li key={doc.id}>
+                      <div className="card flex items-center gap-3 p-3">
+                        <span className="text-lg" aria-hidden="true">
+                          {fileTypeIcon(doc.type)}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                            <p className="text-sm text-foreground truncate" title={doc.name}>
+                              {title}
+                            </p>
+                            {extension ? (
+                              <Badge variant="neutral" className="font-mono text-xs shrink-0">
+                                .{extension}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted shrink-0">—</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted mt-0.5">
+                            {formatFileSize(doc.size)} · {formatDate(doc.created_at)}
+                            {doc.source === 'tenderned' && (
+                              <span className="text-muted/80"> · TenderNed</span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <a
+                            href={doc.blob_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-muted hover:text-blue-light transition-colors p-1.5 rounded-md hover:bg-muted/40"
+                            aria-label={`Bekijk ${doc.name}`}
+                            title="Bekijken"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </a>
+                          <a
+                            href={doc.blob_url}
+                            download={doc.name}
+                            className="text-muted hover:text-blue-light transition-colors p-1.5 rounded-md hover:bg-muted/40"
+                            aria-label={`Download ${doc.name}`}
+                            title="Downloaden"
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
             )}
           </div>
         </div>
@@ -224,11 +275,11 @@ export default async function TenderDetailPage({
         {/* Chat sidebar */}
         <div className="card flex flex-col" style={{ minHeight: '500px', maxHeight: '700px' }}>
           <div className="p-4 border-b border-border-subtle">
-            <h2 className="font-semibold text-off-white font-grotesk flex items-center gap-2">
+            <h2 className="font-semibold text-foreground font-grotesk flex items-center gap-2">
               <Brain className="w-4 h-4 text-blue-light" />
               AI Chat
             </h2>
-            <p className="text-xs text-slate-ai mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               Stel vragen over deze tender
             </p>
           </div>

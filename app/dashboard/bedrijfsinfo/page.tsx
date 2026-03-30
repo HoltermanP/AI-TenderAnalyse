@@ -56,7 +56,7 @@ function TagInput({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-off-white mb-1.5">
+      <label className="block text-sm font-medium text-foreground mb-1.5">
         {label}
       </label>
       <div className="flex flex-wrap gap-2 mb-2">
@@ -88,7 +88,7 @@ function TagInput({
             }
           }}
           placeholder={placeholder}
-          className="flex-1 bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+          className="flex-1 bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
         />
         <Button type="button" variant="outline" size="sm" onClick={add}>
           <Plus className="w-3.5 h-3.5" />
@@ -160,11 +160,11 @@ export default function BedrijfsinfoPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold font-grotesk text-off-white flex items-center gap-2">
+        <h1 className="text-2xl font-bold font-grotesk text-foreground flex items-center gap-2">
           <Building2 className="w-6 h-6 text-blue-light" />
           Bedrijfsinfo
         </h1>
-        <p className="text-slate-ai text-sm mt-1">
+        <p className="text-muted text-sm mt-1">
           Deze informatie wordt gebruikt bij de AI-analyse van tenders
         </p>
       </div>
@@ -177,52 +177,52 @@ export default function BedrijfsinfoPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-off-white mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Bedrijfsnaam <span className="text-velocity-red">*</span>
                 </label>
                 <input
                   required
                   value={data.name}
                   onChange={(e) => setData((d) => ({ ...d, name: e.target.value }))}
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                   placeholder="Mijn Bedrijf BV"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-off-white mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   KVK-nummer
                 </label>
                 <input
                   value={data.kvk_number}
                   onChange={(e) => setData((d) => ({ ...d, kvk_number: e.target.value }))}
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                   placeholder="12345678"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-off-white mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Bedrijfsomschrijving
               </label>
               <textarea
                 rows={3}
                 value={data.description}
                 onChange={(e) => setData((d) => ({ ...d, description: e.target.value }))}
-                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue resize-none"
+                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue resize-none"
                 placeholder="Wat doet je bedrijf? Wat zijn jullie specialiteiten?"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-off-white mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Omzetrange
                 </label>
                 <select
                   value={data.revenue_range}
                   onChange={(e) => setData((d) => ({ ...d, revenue_range: e.target.value }))}
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:border-ai-blue"
                 >
                   <option value="">Selecteer...</option>
                   <option value="0-1M">€0 – €1M</option>
@@ -233,13 +233,13 @@ export default function BedrijfsinfoPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-off-white mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Medewerkers
                 </label>
                 <select
                   value={data.employee_count}
                   onChange={(e) => setData((d) => ({ ...d, employee_count: e.target.value }))}
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:border-ai-blue"
                 >
                   <option value="">Selecteer...</option>
                   <option value="1-10">1 – 10</option>
@@ -250,7 +250,7 @@ export default function BedrijfsinfoPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-off-white mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Opgericht
                 </label>
                 <input
@@ -259,21 +259,21 @@ export default function BedrijfsinfoPage() {
                   max={new Date().getFullYear()}
                   value={data.founded_year}
                   onChange={(e) => setData((d) => ({ ...d, founded_year: e.target.value }))}
-                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                   placeholder="2010"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-off-white mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Website
               </label>
               <input
                 type="url"
                 value={data.website}
                 onChange={(e) => setData((d) => ({ ...d, website: e.target.value }))}
-                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-off-white placeholder-slate-ai focus:outline-none focus:border-ai-blue"
+                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                 placeholder="https://www.mijnbedrijf.nl"
               />
             </div>

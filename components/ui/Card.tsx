@@ -44,7 +44,7 @@ export function CardTitle({
   className?: string
 }) {
   return (
-    <h3 className={cn('font-semibold text-off-white font-grotesk', className)}>
+    <h3 className={cn('font-semibold text-foreground font-grotesk', className)}>
       {children}
     </h3>
   )
