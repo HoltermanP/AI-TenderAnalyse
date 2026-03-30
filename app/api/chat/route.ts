@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { streamChat } from '@/lib/anthropic'
 import { sql } from '@/lib/db'
+import { getToneOfVoiceInstruction } from '@/lib/toneOfVoice'
 import { z } from 'zod'
 
 const ChatRequestSchema = z.object({
@@ -25,15 +26,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Geen berichten' }, { status: 400 })
     }
 
-    const systemPrompt = context
-      ? `Je bent een AI-assistent gespecialiseerd in tender-analyse en aanbestedingen.
+    let toneInstruction = ''
+    if (tenderId) {
+      const toneRows = await sql`
+        SELECT tone_of_voice FROM tenders WHERE id = ${tenderId} LIMIT 1
+      `
+      const raw = (toneRows[0] as { tone_of_voice?: string } | undefined)
+        ?.tone_of_voice
+      toneInstruction = getToneOfVoiceInstruction(raw)
+    }
+
+    const baseAssistant = `Je bent een AI-assistent gespecialiseerd in tender-analyse en aanbestedingen.
+Je helpt medewerkers bij het analyseren van tenders, het beoordelen van kansen en het opstellen van biedstrategieën en inschrijvingen.
+Antwoord altijd in het Nederlands tenzij anders gevraagd.${tenderId ? `\n\nTone of voice voor je antwoorden: ${toneInstruction}` : ''}`
+
+    let systemPrompt: string | undefined
+    if (tenderId) {
+      systemPrompt = context
+        ? `${baseAssistant}
+
+Huidige context:
+${context}
+
+Beantwoord vragen over deze tender specifiek en gebruik de beschikbare informatie.`
+        : baseAssistant
+    } else if (context) {
+      systemPrompt = `Je bent een AI-assistent gespecialiseerd in tender-analyse en aanbestedingen.
 
 Huidige context:
 ${context}
 
 Beantwoord vragen over deze tender specifiek en gebruik de beschikbare informatie.
 Antwoord altijd in het Nederlands tenzij anders gevraagd.`
-      : undefined
+    }
 
     // Save session if not exists
     try {

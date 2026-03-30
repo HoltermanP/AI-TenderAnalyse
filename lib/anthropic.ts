@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { getToneOfVoiceInstruction } from '@/lib/toneOfVoice'
 
 // apiKey defaults to process.env.ANTHROPIC_API_KEY — throws at call time if missing
 export const anthropic = new Anthropic({
@@ -15,6 +16,12 @@ export interface TenderAnalysisInput {
     deadline: string
     value?: number
     category?: string
+    publication_date?: string | null
+    currency?: string | null
+    url?: string | null
+    external_id?: string | null
+    source?: string
+    tenderned_bijlagen_count?: number | null
   }
   companyInfo: {
     name: string
@@ -22,9 +29,27 @@ export interface TenderAnalysisInput {
     strengths: string[]
     certifications: string[]
     sectors: string[]
+    legalForm?: string
+    addressBlock?: string
+    vatNumber?: string
+    contactBlock?: string
+    cpvFocus: string[]
+    referenceProjects?: string
+    differentiators?: string
+    strategicNotes?: string
+    revenueRange?: string
+    employeeCount?: string
+    foundedYear?: number | null
+    website?: string
+    kvkNumber?: string
   }
-  documents?: string[]
+  /** Per bijlage: naam + AI-samenvatting (incl. TenderNed-bijlagen op blob) */
+  documentSummaries?: Array<{ name: string; summary: string }>
+  /** Handmatig geüploade bedrijfsdocumenten (strategie, jaarplan, …) */
+  companyDocumentSummaries?: Array<{ name: string; summary: string }>
   lessonsLearned?: string[]
+  /** Per tender: beïnvloedt formulering van analyse (tekstvelden in JSON) */
+  toneOfVoice?: string | null
 }
 
 export interface TenderAnalysisResult {
@@ -39,32 +64,157 @@ export interface TenderAnalysisResult {
   effort_estimate: string
 }
 
+/** Zet database `company_info` om naar de structuur voor de AI-prompt. */
+export function companyInfoFromDb(row: {
+  name: string
+  description?: string | null
+  strengths?: string[] | null
+  certifications?: string[] | null
+  sectors?: string[] | null
+  revenue_range?: string | null
+  employee_count?: string | null
+  founded_year?: number | null
+  website?: string | null
+  kvk_number?: string | null
+  legal_form?: string | null
+  address_line?: string | null
+  postal_code?: string | null
+  city?: string | null
+  country?: string | null
+  vat_number?: string | null
+  contact_name?: string | null
+  contact_email?: string | null
+  contact_phone?: string | null
+  cpv_focus?: string[] | null
+  reference_projects?: string | null
+  differentiators?: string | null
+  strategic_notes?: string | null
+}): TenderAnalysisInput['companyInfo'] {
+  const addrParts = [
+    row.address_line?.trim(),
+    [row.postal_code?.trim(), row.city?.trim()].filter(Boolean).join(' '),
+    row.country?.trim() || 'Nederland',
+  ].filter((p) => p && String(p).length > 0)
+  const addressBlock = addrParts.join('\n')
+
+  const contactParts = [
+    row.contact_name?.trim(),
+    row.contact_email?.trim(),
+    row.contact_phone?.trim(),
+  ].filter(Boolean)
+  const contactBlock = contactParts.join(' · ')
+
+  return {
+    name: row.name,
+    description: row.description ?? '',
+    strengths: row.strengths ?? [],
+    certifications: row.certifications ?? [],
+    sectors: row.sectors ?? [],
+    legalForm: row.legal_form ?? undefined,
+    addressBlock: addressBlock || undefined,
+    vatNumber: row.vat_number ?? undefined,
+    contactBlock: contactBlock || undefined,
+    cpvFocus: row.cpv_focus ?? [],
+    referenceProjects: row.reference_projects ?? undefined,
+    differentiators: row.differentiators ?? undefined,
+    strategicNotes: row.strategic_notes ?? undefined,
+    revenueRange: row.revenue_range ?? undefined,
+    employeeCount: row.employee_count ?? undefined,
+    foundedYear: row.founded_year ?? null,
+    website: row.website ?? undefined,
+    kvkNumber: row.kvk_number ?? undefined,
+  }
+}
+
+function buildCompanyInfoPrompt(
+  c: TenderAnalysisInput['companyInfo']
+): string {
+  const lines: string[] = [
+    `Bedrijf: ${c.name}`,
+    c.legalForm ? `Rechtsvorm: ${c.legalForm}` : '',
+    `Beschrijving: ${c.description}`,
+  ]
+  if (c.addressBlock?.trim()) {
+    lines.push(`Vestiging:\n${c.addressBlock.trim()}`)
+  }
+  lines.push(
+    `KVK: ${c.kvkNumber ?? '—'} | BTW: ${c.vatNumber ?? '—'}`,
+    `Website: ${c.website ?? '—'}`,
+    `Omzet (range): ${c.revenueRange ?? '—'} | Medewerkers (range): ${c.employeeCount ?? '—'} | Opgericht: ${c.foundedYear ?? '—'}`
+  )
+  if (c.contactBlock?.trim()) {
+    lines.push(`Contact:\n${c.contactBlock.trim()}`)
+  }
+  lines.push(
+    `Sterktes: ${c.strengths.join(', ')}`,
+    `Certificeringen: ${c.certifications.join(', ')}`,
+    `Sectoren: ${c.sectors.join(', ')}`,
+    `CPV-focus (eigen keuze): ${c.cpvFocus.length ? c.cpvFocus.join(', ') : '—'}`,
+    `Referentieprojecten / track record:\n${c.referenceProjects?.trim() || '—'}`,
+    `Onderscheidend vermogen / USP:\n${c.differentiators?.trim() || '—'}`,
+    `Strategie & aandachtspunten:\n${c.strategicNotes?.trim() || '—'}`
+  )
+  return lines.filter(Boolean).join('\n\n')
+}
+
 export async function analyseTender(
   input: TenderAnalysisInput
 ): Promise<TenderAnalysisResult> {
+  const toneLine = getToneOfVoiceInstruction(input.toneOfVoice)
   const systemPrompt = `Je bent een expert tender-analist voor een Nederlands bedrijf.
 Analyseer de tender grondig en geef een gestructureerde beoordeling terug in JSON formaat.
 Wees objectief, concreet en gebruik beschikbare informatie maximaal.
-Geef altijd een score van 0-100 en een duidelijke aanbeveling.`
+Geef altijd een score van 0-100 en een duidelijke aanbeveling.
+Tone of voice voor alle tekstuele velden in de JSON (samenvatting, arrays, effort_estimate): ${toneLine}`
 
-  const userPrompt = `Analyseer de volgende tender:
+  const extraTenderLines = [
+    input.tender.publication_date
+      ? `Publicatiedatum: ${input.tender.publication_date}`
+      : null,
+    input.tender.value != null
+      ? `Waarde: ${input.tender.currency === 'EUR' || !input.tender.currency ? `€${input.tender.value.toLocaleString('nl-NL')}` : `${input.tender.value} ${input.tender.currency ?? ''}`}`
+      : null,
+    input.tender.category ? `Categorie: ${input.tender.category}` : null,
+    input.tender.url ? `Tenderlink: ${input.tender.url}` : null,
+    input.tender.external_id ? `Extern ID: ${input.tender.external_id}` : null,
+    input.tender.source ? `Bron: ${input.tender.source}` : null,
+    input.tender.tenderned_bijlagen_count != null
+      ? `Aantal TenderNed-documenten (catalogus): ${input.tender.tenderned_bijlagen_count}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  const bijlagenBlock =
+    input.documentSummaries?.length ?
+      `BIJLAGEN (blob / documentstore, per bestand):\n${input.documentSummaries
+        .map((d) => `### ${d.name}\n${d.summary}`)
+        .join('\n\n')}`
+    : ''
+
+  const bedrijfsDocsBlock =
+    input.companyDocumentSummaries?.length ?
+      `BEDRIJFSDOCUMENTEN (geüpload):\n${input.companyDocumentSummaries
+        .map((d) => `### ${d.name}\n${d.summary}`)
+        .join('\n\n')}`
+    : ''
+
+  const userPrompt = `Analyseer de volgende tender.
+Formuleer de waarden van de JSON-tekstvelden consequent volgens de tone of voice uit de systeeminstructie.
 
 TENDER INFORMATIE:
 Titel: ${input.tender.title}
 Beschrijving: ${input.tender.description}
 Aanbestedende dienst: ${input.tender.contracting_authority}
 Deadline: ${input.tender.deadline}
-${input.tender.value ? `Waarde: €${input.tender.value.toLocaleString('nl-NL')}` : ''}
-${input.tender.category ? `Categorie: ${input.tender.category}` : ''}
+${extraTenderLines}
 
 BEDRIJFSINFORMATIE:
-Bedrijf: ${input.companyInfo.name}
-Beschrijving: ${input.companyInfo.description}
-Sterktes: ${input.companyInfo.strengths.join(', ')}
-Certificeringen: ${input.companyInfo.certifications.join(', ')}
-Sectoren: ${input.companyInfo.sectors.join(', ')}
+${buildCompanyInfoPrompt(input.companyInfo)}
 
-${input.documents?.length ? `DOCUMENTEN:\n${input.documents.join('\n\n')}` : ''}
+${bedrijfsDocsBlock}
+
+${bijlagenBlock}
 
 ${input.lessonsLearned?.length ? `LESSONS LEARNED:\n${input.lessonsLearned.join('\n\n')}` : ''}
 
@@ -134,6 +284,26 @@ export async function summariseDocument(content: string): Promise<string> {
       {
         role: 'user',
         content: `Maak een beknopte samenvatting van dit document voor tender-analyse doeleinden. Focus op: vereisten, criteria, deadlines, budget, en relevante specificaties.\n\nDocument:\n${content}`,
+      },
+    ],
+  })
+
+  const result = message.content[0]
+  if (result.type !== 'text') throw new Error('Unexpected response type')
+  return result.text
+}
+
+/** Samenvatting voor geüploade bedrijfsdocumenten (jaarplan, strategie, visie, …). */
+export async function summariseCompanyProfileDocument(
+  content: string
+): Promise<string> {
+  const message = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    messages: [
+      {
+        role: 'user',
+        content: `Maak een beknopte samenvatting van dit bedrijfsdocument voor gebruik bij tender- en bid-analyse. Focus op: strategische prioriteiten, kerncompetenties, doelen, markt/sectoren, capaciteit, innovatie, duurzaamheid, en alles wat helpt om te bepalen of een aanbesteding past bij het bedrijf. Antwoord in het Nederlands.\n\nDocument:\n${content}`,
       },
     ],
   })

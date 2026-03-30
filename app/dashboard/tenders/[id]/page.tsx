@@ -5,7 +5,6 @@ import { AnalysisPanel } from '@/components/analysis/AnalysisPanel'
 import { FileUpload } from '@/components/upload/FileUpload'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import {
   formatCurrency,
@@ -29,7 +28,14 @@ import {
 import Link from 'next/link'
 import { StartAnalysisButton } from '@/components/analysis/StartAnalysisButton'
 import { TenderNedBijlagenToolbar } from '@/components/tenders/TenderNedBijlagenToolbar'
+import { DeleteTenderButton } from '@/components/tenders/DeleteTenderButton'
 import { GeneratePdfButton } from '@/components/pdf/GeneratePdfButton'
+import { TenderNedBijlagenCatalog } from '@/components/tenders/TenderNedBijlagenCatalog'
+import { TenderToneOfVoiceSelect } from '@/components/tenders/TenderToneOfVoiceSelect'
+import {
+  fetchPublicationDocumenten,
+  type TnsPublicationDocument,
+} from '@/lib/tenderned'
 import type { Metadata } from 'next'
 
 interface TenderDetailPageProps {
@@ -54,6 +60,8 @@ export default async function TenderDetailPage({
   let tender: Tender | null = null
   let analysis: Analysis | null = null
   let documents: Document[] = []
+  let tnsDocuments: TnsPublicationDocument[] | null = null
+  let tnsDocumentsError: string | null = null
 
   try {
     const tRows = await sql`SELECT * FROM tenders WHERE id = ${params.id}`
@@ -67,6 +75,20 @@ export default async function TenderDetailPage({
     const dRows =
       await sql`SELECT * FROM documents WHERE tender_id = ${params.id} ORDER BY created_at DESC`
     documents = dRows as Document[]
+
+    if (tender.source === 'tenderned' && tender.external_id) {
+      const publicatieId = parseInt(String(tender.external_id), 10)
+      if (Number.isFinite(publicatieId) && publicatieId > 0) {
+        try {
+          tnsDocuments = await fetchPublicationDocumenten(publicatieId, {
+            cache: 'no-store',
+          })
+        } catch (e) {
+          tnsDocumentsError =
+            e instanceof Error ? e.message : 'Kon TenderNed-bijlagen niet laden'
+        }
+      }
+    }
   } catch {
     notFound()
   }
@@ -74,6 +96,18 @@ export default async function TenderDetailPage({
   if (!tender) notFound()
 
   const days = tender.deadline ? daysUntil(tender.deadline) : null
+
+  const syncedByExternalId = new Map<string, Document>()
+  for (const d of documents) {
+    if (d.external_document_id) {
+      syncedByExternalId.set(d.external_document_id, d)
+    }
+  }
+
+  const showTenderNedCatalog = tnsDocuments !== null
+  const manualDocuments = showTenderNedCatalog
+    ? documents.filter((d) => d.source === 'upload')
+    : documents
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -131,7 +165,7 @@ export default async function TenderDetailPage({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {tender.url && (
             <a
               href={tender.url}
@@ -143,10 +177,20 @@ export default async function TenderDetailPage({
               Origineel
             </a>
           )}
+          <DeleteTenderButton
+            tenderId={tender.id}
+            tenderTitle={tender.title}
+            redirectTo="/dashboard/tenders"
+          />
           <StartAnalysisButton tenderId={tender.id} hasAnalysis={!!analysis} />
           {analysis && <GeneratePdfButton tenderId={tender.id} />}
         </div>
       </div>
+
+      <TenderToneOfVoiceSelect
+        tenderId={tender.id}
+        initialTone={tender.tone_of_voice}
+      />
 
       {/* Description */}
       {tender.description && (
@@ -191,15 +235,48 @@ export default async function TenderDetailPage({
 
           {/* Bijlagen */}
           <div>
-            <h2 className="text-lg font-semibold font-grotesk text-foreground mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold font-grotesk text-foreground mb-2 flex items-center gap-2">
               <FileText className="w-5 h-5 text-blue-light" />
               Bijlagen
-              {documents.length > 0 && (
+              {showTenderNedCatalog && tnsDocuments && (
+                <span className="text-sm font-normal text-muted">
+                  ({tnsDocuments.length} volgens TenderNed
+                  {documents.length > 0 && (
+                    <>
+                      {' '}
+                      · {documents.length} in app
+                    </>
+                  )}
+                  )
+                </span>
+              )}
+              {!showTenderNedCatalog && documents.length > 0 && (
                 <span className="text-sm font-normal text-muted">
                   ({documents.length})
                 </span>
               )}
             </h2>
+            {showTenderNedCatalog && tender.source === 'tenderned' && (
+              <p className="text-sm text-muted mb-4">
+                Alle bijlagen van TenderNed staan hieronder met titel. Gebruik de knop om
+                bestanden naar Blob te halen en lokaal te gebruiken.
+              </p>
+            )}
+
+            {tnsDocumentsError && (
+              <p className="text-sm text-velocity-red mb-4" role="alert">
+                {tnsDocumentsError} — je kunt nog wel proberen te synchroniseren met de knop
+                hieronder.
+              </p>
+            )}
+
+            {showTenderNedCatalog && tnsDocuments && (
+              <TenderNedBijlagenCatalog
+                documents={tnsDocuments}
+                syncedByExternalId={syncedByExternalId}
+              />
+            )}
+
             <TenderNedBijlagenToolbar
               tenderId={tender.id}
               source={tender.source}
@@ -209,9 +286,16 @@ export default async function TenderDetailPage({
 
             <FileUpload tenderId={tender.id} />
 
-            {documents.length > 0 && (
+            {manualDocuments.length > 0 && (
               <ul className="mt-4 space-y-2 list-none p-0 m-0" aria-label="Lijst van bijlagen">
-                {documents.map((doc) => {
+                {showTenderNedCatalog && (
+                  <li className="list-none mb-2">
+                    <p className="text-xs font-medium text-muted uppercase tracking-wide">
+                      Handmatig geüpload
+                    </p>
+                  </li>
+                )}
+                {manualDocuments.map((doc) => {
                   const { title, extension } = filenameTitleAndExtension(
                     doc.name,
                     doc.type

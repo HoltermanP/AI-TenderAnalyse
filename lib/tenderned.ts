@@ -402,7 +402,8 @@ export function resolveTenderNedAssetUrl(href: string): string {
 }
 
 export async function fetchPublicationDocumenten(
-  publicatieId: number
+  publicatieId: number,
+  options?: { cache?: RequestCache }
 ): Promise<TnsPublicationDocument[]> {
   if (useTendernedMock()) {
     return []
@@ -410,10 +411,15 @@ export async function fetchPublicationDocumenten(
 
   const base = getTnsBaseUrl()
   const url = `${base}/publicaties/${publicatieId}/documenten`
-  const response = await fetch(url, {
+  const fetchInit: RequestInit & { next?: { revalidate: number } } = {
     headers: { Accept: 'application/json' },
-    next: { revalidate: 120 },
-  })
+  }
+  if (options?.cache) {
+    fetchInit.cache = options.cache
+  } else {
+    fetchInit.next = { revalidate: 120 }
+  }
+  const response = await fetch(url, fetchInit)
 
   if (!response.ok) {
     throw new Error(
@@ -423,6 +429,14 @@ export async function fetchPublicationDocumenten(
 
   const data = (await response.json()) as TnsDocumentenResponse
   return data.documenten ?? []
+}
+
+/** Aantal bijlagen volgens TenderNed (zelfde endpoint als sync). */
+export async function fetchPublicatieBijlagenCount(
+  publicatieId: number
+): Promise<number> {
+  const docs = await fetchPublicationDocumenten(publicatieId)
+  return docs.length
 }
 
 /** Alleen actief als `TENDERNED_USE_MOCK=true`. */

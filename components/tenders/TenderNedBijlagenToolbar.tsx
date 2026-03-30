@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { Download, Loader2, RefreshCw } from 'lucide-react'
+import { Download, FileArchive, Loader2 } from 'lucide-react'
 
 interface TenderNedBijlagenToolbarProps {
   tenderId: string
@@ -82,9 +82,9 @@ export function TenderNedBijlagenToolbar({
         {syncing ? (
           <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
         ) : (
-          <RefreshCw className="w-4 h-4" aria-hidden />
+          <Download className="w-4 h-4" aria-hidden />
         )}
-        Bijlagen ophalen van TenderNed
+        Alle bijlagen naar Blob halen
       </Button>
 
       {hasDocuments && (
@@ -92,8 +92,8 @@ export function TenderNedBijlagenToolbar({
           href={`/api/tenders/${tenderId}/bijlagen/zip`}
           className="inline-flex items-center justify-center gap-2 text-sm font-medium rounded-md border border-border-subtle bg-card hover:bg-muted/30 px-3 py-2 transition-colors"
         >
-          <Download className="w-4 h-4" aria-hidden />
-          Alle bijlagen downloaden (ZIP)
+          <FileArchive className="w-4 h-4" aria-hidden />
+          ZIP van Blob-downloaden
         </a>
       )}
 

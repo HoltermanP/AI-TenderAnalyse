@@ -35,14 +35,14 @@ html.dark {
   --border-color: #1E1E28;
 }
 
-/* Medium theme */
+/* Medium theme (lichter dan voorheen, tussen dark en light) */
 html.medium {
-  --bg-primary: #13131A;
-  --bg-surface: #1C1C26;
-  --bg-elevated: #222230;
-  --text-primary: #E8EAF0;
-  --text-secondary: #8A9AB8;
-  --border-color: #2A2A38;
+  --bg-primary: #22222E;
+  --bg-surface: #2D2D3A;
+  --bg-elevated: #383846;
+  --text-primary: #EEF1F6;
+  --text-secondary: #9AA8C4;
+  --border-color: #3F3F52;
 }
 
 /* Light theme */

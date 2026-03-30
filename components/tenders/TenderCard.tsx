@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Calendar, Euro, Building2, ExternalLink, Paperclip } from 'lucide-react'
+import { DeleteTenderButton } from '@/components/tenders/DeleteTenderButton'
 import { Badge } from '@/components/ui/Badge'
 import { ScoreRing } from '@/components/ui/ScoreRing'
 import {
@@ -38,9 +39,10 @@ export function TenderCard({ tender, analysis, attachmentCount = 0 }: TenderCard
   const isUrgent = days !== null && days <= 7
 
   return (
+    <div className="card hover:border-blue-light/30 transition-all duration-200 flex flex-col overflow-hidden group">
     <Link
       href={`/dashboard/tenders/${tender.id}`}
-      className="card hover:border-blue-light/30 transition-all duration-200 p-5 flex flex-col gap-4 group"
+      className="p-5 flex flex-col gap-4 flex-1 min-w-0"
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
@@ -125,5 +127,13 @@ export function TenderCard({ tender, analysis, attachmentCount = 0 }: TenderCard
         )}
       </div>
     </Link>
+    <div className="flex justify-end border-t border-border-subtle/50 px-3 py-2 bg-surface/30">
+      <DeleteTenderButton
+        tenderId={tender.id}
+        tenderTitle={tender.title}
+        compact
+      />
+    </div>
+    </div>
   )
 }

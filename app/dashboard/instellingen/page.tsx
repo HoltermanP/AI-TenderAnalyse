@@ -1,5 +1,7 @@
+import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
-import { Settings, Database, Key, Palette } from 'lucide-react'
+import { Settings, Database, Key, Palette, Building2, ChevronRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -15,9 +17,36 @@ export default function InstellingenPage() {
           Instellingen
         </h1>
         <p className="text-muted text-sm mt-1">
-          Configuratie en API-integraties
+          Configuratie, bedrijfsprofiel en API-integraties
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-blue-light" />
+            <CardTitle>Bedrijfsprofiel</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted">
+          <p>
+            Vul handmatig je bedrijfsgegevens, vestiging, contact, CPV-focus,
+            referenties en strategische aandachtspunten in. Deze informatie wordt
+            meegenomen bij elke AI-tenderanalyse en in exports.
+          </p>
+          <Link
+            href="/dashboard/bedrijfsinfo"
+            className={cn(
+              'inline-flex items-center gap-2 font-medium rounded-md transition-colors',
+              'border border-foreground/20 hover:border-foreground/40 bg-transparent text-foreground',
+              'text-xs px-3 py-1.5 h-7'
+            )}
+          >
+            Naar bedrijfsinfo
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

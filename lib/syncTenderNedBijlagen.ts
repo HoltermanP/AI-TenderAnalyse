@@ -32,6 +32,13 @@ export async function syncTenderNedBijlagenToBlob(input: {
 }> {
   const { tenderId, publicatieId } = input
   const listed = await fetchPublicationDocumenten(publicatieId)
+
+  await sql`
+    UPDATE tenders
+    SET tenderned_bijlagen_count = ${listed.length}, updated_at = NOW()
+    WHERE id = ${tenderId}
+  `
+
   let added = 0
   let skipped = 0
   const errors: { documentNaam: string; error: string }[] = []

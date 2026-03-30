@@ -33,7 +33,10 @@ async function DashboardStats() {
   try {
     const rows = await sql`
       SELECT t.*, la.score AS analysis_score, la.recommendation AS analysis_rec,
-             (SELECT COUNT(*)::int FROM documents d WHERE d.tender_id = t.id) AS attachment_count
+             COALESCE(
+               t.tenderned_bijlagen_count,
+               (SELECT COUNT(*)::int FROM documents d WHERE d.tender_id = t.id)
+             ) AS attachment_count
       FROM tenders t
       LEFT JOIN LATERAL (
         SELECT score, recommendation

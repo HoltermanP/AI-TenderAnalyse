@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { Plus, X, Save, Building2 } from 'lucide-react'
+import { Plus, X, Save, Building2, MapPin, UserCircle, Target } from 'lucide-react'
+import { CompanyDocumentsSection } from '@/components/bedrijfsinfo/CompanyDocumentsSection'
 
 interface CompanyInfo {
   id?: string
@@ -18,6 +19,19 @@ interface CompanyInfo {
   founded_year: string
   website: string
   kvk_number: string
+  legal_form: string
+  address_line: string
+  postal_code: string
+  city: string
+  country: string
+  vat_number: string
+  contact_name: string
+  contact_email: string
+  contact_phone: string
+  cpv_focus: string[]
+  reference_projects: string
+  differentiators: string
+  strategic_notes: string
 }
 
 const EMPTY_COMPANY: CompanyInfo = {
@@ -31,6 +45,19 @@ const EMPTY_COMPANY: CompanyInfo = {
   founded_year: '',
   website: '',
   kvk_number: '',
+  legal_form: '',
+  address_line: '',
+  postal_code: '',
+  city: '',
+  country: '',
+  vat_number: '',
+  contact_name: '',
+  contact_email: '',
+  contact_phone: '',
+  cpv_focus: [],
+  reference_projects: '',
+  differentiators: '',
+  strategic_notes: '',
 }
 
 function TagInput({
@@ -110,8 +137,15 @@ export default function BedrijfsinfoPage() {
       try {
         const res = await fetch('/api/bedrijfsinfo')
         if (res.ok) {
-          const json = (await res.json()) as CompanyInfo
-          setData({ ...EMPTY_COMPANY, ...json })
+          const json = (await res.json()) as Partial<CompanyInfo>
+          setData({
+            ...EMPTY_COMPANY,
+            ...json,
+            strengths: json.strengths ?? [],
+            certifications: json.certifications ?? [],
+            sectors: json.sectors ?? [],
+            cpv_focus: json.cpv_focus ?? [],
+          })
         }
       } catch {
         // ignore
@@ -165,7 +199,8 @@ export default function BedrijfsinfoPage() {
           Bedrijfsinfo
         </h1>
         <p className="text-muted text-sm mt-1">
-          Deze informatie wordt gebruikt bij de AI-analyse van tenders
+          Handmatige velden en geüploade bedrijfsdocumenten worden meegenomen bij de
+          AI-analyse, chat en rapportage.
         </p>
       </div>
 
@@ -190,6 +225,20 @@ export default function BedrijfsinfoPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Rechtsvorm
+                </label>
+                <input
+                  value={data.legal_form}
+                  onChange={(e) => setData((d) => ({ ...d, legal_form: e.target.value }))}
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
+                  placeholder="Bijv. BV, NV, VOF, stichting…"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   KVK-nummer
                 </label>
                 <input
@@ -197,6 +246,17 @@ export default function BedrijfsinfoPage() {
                   onChange={(e) => setData((d) => ({ ...d, kvk_number: e.target.value }))}
                   className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
                   placeholder="12345678"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  BTW-nummer
+                </label>
+                <input
+                  value={data.vat_number}
+                  onChange={(e) => setData((d) => ({ ...d, vat_number: e.target.value }))}
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
+                  placeholder="NL123456789B01"
                 />
               </div>
             </div>
@@ -282,6 +342,170 @@ export default function BedrijfsinfoPage() {
 
         <Card>
           <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-blue-light shrink-0" />
+              Vestiging
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Adres
+              </label>
+              <input
+                value={data.address_line}
+                onChange={(e) => setData((d) => ({ ...d, address_line: e.target.value }))}
+                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
+                placeholder="Straat en huisnummer"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Postcode
+                </label>
+                <input
+                  value={data.postal_code}
+                  onChange={(e) => setData((d) => ({ ...d, postal_code: e.target.value }))}
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
+                  placeholder="1234 AB"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Plaats
+                </label>
+                <input
+                  value={data.city}
+                  onChange={(e) => setData((d) => ({ ...d, city: e.target.value }))}
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
+                  placeholder="Amsterdam"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Land
+              </label>
+              <input
+                value={data.country}
+                onChange={(e) => setData((d) => ({ ...d, country: e.target.value }))}
+                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
+                placeholder="Nederland"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCircle className="w-5 h-5 text-blue-light shrink-0" />
+              Contact
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Naam contactpersoon
+                </label>
+                <input
+                  value={data.contact_name}
+                  onChange={(e) => setData((d) => ({ ...d, contact_name: e.target.value }))}
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
+                  placeholder="Voor tender- of bid-vragen"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Telefoon
+                </label>
+                <input
+                  type="tel"
+                  value={data.contact_phone}
+                  onChange={(e) => setData((d) => ({ ...d, contact_phone: e.target.value }))}
+                  className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
+                  placeholder="+31 …"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                E-mail
+              </label>
+              <input
+                type="email"
+                value={data.contact_email}
+                onChange={(e) => setData((d) => ({ ...d, contact_email: e.target.value }))}
+                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue"
+                placeholder="tenders@mijnbedrijf.nl"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-blue-light shrink-0" />
+              Tenderprofiel
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <TagInput
+              label="CPV-focus (codes of omschrijvingen)"
+              value={data.cpv_focus}
+              onChange={(v) => setData((d) => ({ ...d, cpv_focus: v }))}
+              placeholder="Bijv. 72000000 of IT-dienstverlening overheid…"
+            />
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Referentieprojecten / track record
+              </label>
+              <textarea
+                rows={5}
+                value={data.reference_projects}
+                onChange={(e) =>
+                  setData((d) => ({ ...d, reference_projects: e.target.value }))
+                }
+                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue resize-y min-h-[100px]"
+                placeholder="Vermeld relevante opdrachten, opdrachtgevers, volumes of periodes die de AI moet kennen bij het matchen met tenders."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Onderscheidend vermogen / USP
+              </label>
+              <textarea
+                rows={4}
+                value={data.differentiators}
+                onChange={(e) =>
+                  setData((d) => ({ ...d, differentiators: e.target.value }))
+                }
+                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue resize-y min-h-[88px]"
+                placeholder="Wat maakt jullie uniek t.o.v. concurrenten in aanbestedingen?"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Strategie en aandachtspunten
+              </label>
+              <textarea
+                rows={5}
+                value={data.strategic_notes}
+                onChange={(e) =>
+                  setData((d) => ({ ...d, strategic_notes: e.target.value }))
+                }
+                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue resize-y min-h-[100px]"
+                placeholder="Bijv. regio’s of sectoren die je mijdt, minimale contractgrootte, risico’s die je wilt vermijden, of focus voor de komende jaren."
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Competenties & Profiel</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -323,6 +547,8 @@ export default function BedrijfsinfoPage() {
           Opslaan
         </Button>
       </form>
+
+      <CompanyDocumentsSection />
     </div>
   )
 }

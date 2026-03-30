@@ -1,8 +1,10 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { sql } from '@/lib/db'
 import {
   buildTnsListFilters,
+  fetchPublicatieBijlagenCount,
   fetchPublicationsPage,
   getDefaultListPageSize,
   getMaxTendersPerImport,
@@ -109,12 +111,23 @@ export async function POST(request: NextRequest) {
     let firstInsertError: string | null = null
 
     for (const tender of results) {
+      const publicatieId = parseInt(tender.id, 10)
+      let bijlagenCount = 0
+      if (Number.isFinite(publicatieId) && publicatieId > 0) {
+        try {
+          bijlagenCount = await fetchPublicatieBijlagenCount(publicatieId)
+        } catch {
+          bijlagenCount = 0
+        }
+      }
+
       try {
         const inserted = await sql`
           INSERT INTO tenders (
             external_id, title, description, contracting_authority,
             deadline, publication_date, value, currency, category,
-            source, url, cpv_codes, nuts_codes, procedure_type, status
+            source, url, cpv_codes, nuts_codes, procedure_type, status,
+            tenderned_bijlagen_count
           ) VALUES (
             ${tender.id},
             ${tender.title},
@@ -130,13 +143,20 @@ export async function POST(request: NextRequest) {
             ${tender.cpv_codes},
             ${tender.nuts_codes},
             ${tender.procedure_type},
-            'new'
+            'new',
+            ${bijlagenCount}
           )
           ON CONFLICT (external_id) DO NOTHING
           RETURNING id
         `
         if (Array.isArray(inserted) && inserted.length > 0) imported++
         else skipped++
+
+        await sql`
+          UPDATE tenders
+          SET tenderned_bijlagen_count = ${bijlagenCount}, updated_at = NOW()
+          WHERE external_id = ${tender.id}
+        `
       } catch (e) {
         skipped++
         if (!firstInsertError) {
@@ -160,6 +180,9 @@ export async function POST(request: NextRequest) {
               ),
               500
             )
+
+    revalidatePath('/dashboard/tenders')
+    revalidatePath('/dashboard')
 
     const baseMsg = `Sync: ${imported} nieuw, ${skipped} overgeslagen (${results.length} uit catalogus gehaald)`
     const hint =

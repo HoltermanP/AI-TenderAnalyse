@@ -1,7 +1,11 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
-import { analyseTender } from '@/lib/anthropic'
+import { analyseTender, companyInfoFromDb } from '@/lib/anthropic'
+import {
+  ensureCompanyDocumentSummaries,
+  ensureDocumentSummariesForTender,
+} from '@/lib/ensureDocumentSummaries'
 import type { Tender, CompanyInfo, LessonLearned } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
@@ -42,12 +46,13 @@ export async function POST(request: NextRequest) {
 
     // Fetch company info
     const companyRows = await sql`SELECT * FROM company_info LIMIT 1`
-    const company = (companyRows[0] as CompanyInfo | undefined) ?? {
+    const companyRow = (companyRows[0] as CompanyInfo | undefined) ?? {
       name: 'Mijn Bedrijf',
       description: '',
       strengths: [],
       certifications: [],
       sectors: [],
+      cpv_focus: [],
     }
 
     // Fetch lessons learned
@@ -57,10 +62,18 @@ export async function POST(request: NextRequest) {
     `
     const lessons = lessonsRows as Pick<LessonLearned, 'title' | 'description' | 'outcome'>[]
 
-    // Fetch document summaries if available
+    await ensureCompanyDocumentSummaries()
+    await ensureDocumentSummariesForTender(tenderId)
+
     const docRows = await sql`
       SELECT name, summary FROM documents
-      WHERE tender_id = ${tenderId} AND summary IS NOT NULL
+      WHERE tender_id = ${tenderId} AND summary IS NOT NULL AND TRIM(summary) <> ''
+    `
+
+    const companyDocRows = await sql`
+      SELECT name, summary FROM documents
+      WHERE tender_id IS NULL AND source = 'company'
+        AND summary IS NOT NULL AND TRIM(summary) <> ''
     `
 
     // Run AI analysis
@@ -72,18 +85,28 @@ export async function POST(request: NextRequest) {
         deadline: tender.deadline ?? 'Onbekend',
         value: tender.value ?? undefined,
         category: tender.category ?? undefined,
+        publication_date: tender.publication_date ?? null,
+        currency: tender.currency ?? null,
+        url: tender.url ?? null,
+        external_id: tender.external_id ?? null,
+        source: tender.source,
+        tenderned_bijlagen_count: tender.tenderned_bijlagen_count ?? null,
       },
-      companyInfo: {
-        name: company.name,
-        description: company.description ?? '',
-        strengths: company.strengths ?? [],
-        certifications: company.certifications ?? [],
-        sectors: company.sectors ?? [],
-      },
-      documents: (docRows as { summary: string }[]).map((d) => d.summary),
+      companyInfo: companyInfoFromDb(companyRow),
+      documentSummaries: (docRows as { name: string; summary: string }[]).map((d) => ({
+        name: d.name,
+        summary: d.summary,
+      })),
+      companyDocumentSummaries: (
+        companyDocRows as { name: string; summary: string }[]
+      ).map((d) => ({
+        name: d.name,
+        summary: d.summary,
+      })),
       lessonsLearned: lessons.map(
         (l) => `[${l.outcome.toUpperCase()}] ${l.title}: ${l.description}`
       ),
+      toneOfVoice: tender.tone_of_voice ?? null,
     })
 
     // Save / update analysis

@@ -14,6 +14,19 @@ const CompanyInfoSchema = z.object({
   founded_year: z.coerce.number().optional().or(z.literal('')),
   website: z.string().url().optional().or(z.literal('')),
   kvk_number: z.string().optional(),
+  legal_form: z.string().optional(),
+  address_line: z.string().optional(),
+  postal_code: z.string().optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
+  vat_number: z.string().optional(),
+  contact_name: z.string().optional(),
+  contact_email: z.union([z.literal(''), z.string().email()]).optional(),
+  contact_phone: z.string().optional(),
+  cpv_focus: z.array(z.string()).optional(),
+  reference_projects: z.string().optional(),
+  differentiators: z.string().optional(),
+  strategic_notes: z.string().optional(),
 })
 
 export async function GET() {
@@ -44,17 +57,32 @@ export async function PUT(request: NextRequest) {
         founded_year = ${data.founded_year || null},
         website = ${data.website || null},
         kvk_number = ${data.kvk_number ?? null},
+        legal_form = ${data.legal_form ?? null},
+        address_line = ${data.address_line ?? null},
+        postal_code = ${data.postal_code ?? null},
+        city = ${data.city ?? null},
+        country = ${data.country?.trim() ? data.country : null},
+        vat_number = ${data.vat_number ?? null},
+        contact_name = ${data.contact_name ?? null},
+        contact_email = ${data.contact_email || null},
+        contact_phone = ${data.contact_phone ?? null},
+        cpv_focus = ${data.cpv_focus ?? []},
+        reference_projects = ${data.reference_projects ?? null},
+        differentiators = ${data.differentiators ?? null},
+        strategic_notes = ${data.strategic_notes ?? null},
         updated_at = NOW()
       WHERE id = (SELECT id FROM company_info LIMIT 1)
       RETURNING *
     `
 
     if (!rows.length) {
-      // Insert if no row exists
       const inserted = await sql`
         INSERT INTO company_info (
           name, description, strengths, certifications, sectors,
-          revenue_range, employee_count, founded_year, website, kvk_number
+          revenue_range, employee_count, founded_year, website, kvk_number,
+          legal_form, address_line, postal_code, city, country,
+          vat_number, contact_name, contact_email, contact_phone,
+          cpv_focus, reference_projects, differentiators, strategic_notes
         ) VALUES (
           ${data.name},
           ${data.description ?? null},
@@ -65,7 +93,20 @@ export async function PUT(request: NextRequest) {
           ${data.employee_count ?? null},
           ${data.founded_year || null},
           ${data.website || null},
-          ${data.kvk_number ?? null}
+          ${data.kvk_number ?? null},
+          ${data.legal_form ?? null},
+          ${data.address_line ?? null},
+          ${data.postal_code ?? null},
+          ${data.city ?? null},
+          ${data.country?.trim() ? data.country : null},
+          ${data.vat_number ?? null},
+          ${data.contact_name ?? null},
+          ${data.contact_email || null},
+          ${data.contact_phone ?? null},
+          ${data.cpv_focus ?? []},
+          ${data.reference_projects ?? null},
+          ${data.differentiators ?? null},
+          ${data.strategic_notes ?? null}
         )
         RETURNING *
       `

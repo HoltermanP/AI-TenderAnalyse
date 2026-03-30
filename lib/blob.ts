@@ -51,6 +51,13 @@ export async function deleteFile(url: string): Promise<void> {
   await del(url)
 }
 
+/** Verwijdert meerdere blobs (dedupe); één mislukte URL blokkeert de rest niet. */
+export async function deleteBlobUrls(urls: string[]): Promise<void> {
+  const unique = Array.from(new Set(urls.filter(Boolean)))
+  if (!unique.length) return
+  await Promise.allSettled(unique.map((url) => del(url)))
+}
+
 export async function listFiles(prefix: string): Promise<string[]> {
   const { blobs } = await list({ prefix })
   return blobs.map((b) => b.url)

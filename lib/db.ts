@@ -40,6 +40,10 @@ export interface Tender {
   status: 'new' | 'in_progress' | 'analysed' | 'bid' | 'no_bid' | 'won' | 'lost'
   source: string
   url: string | null
+  /** TenderNed: aantal documenten in catalogus-API; null = niet bekend / handmatig */
+  tenderned_bijlagen_count?: number | null
+  /** Voor AI-analyse en chat bij deze tender (o.a. inschrijvingen) */
+  tone_of_voice?: string | null
   created_at: string
   updated_at: string
 }
@@ -77,7 +81,7 @@ export interface Document {
   size: number
   blob_url: string
   summary: string | null
-  source: 'upload' | 'tenderned'
+  source: 'upload' | 'tenderned' | 'company'
   external_document_id: string | null
   created_at: string
 }
@@ -106,5 +110,18 @@ export interface CompanyInfo {
   founded_year: number | null
   website: string | null
   kvk_number: string | null
+  legal_form: string | null
+  address_line: string | null
+  postal_code: string | null
+  city: string | null
+  country: string | null
+  vat_number: string | null
+  contact_name: string | null
+  contact_email: string | null
+  contact_phone: string | null
+  cpv_focus: string[] | null
+  reference_projects: string | null
+  differentiators: string | null
+  strategic_notes: string | null
   updated_at: string
 }

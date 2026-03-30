@@ -19,12 +19,15 @@ interface UploadedFile {
 
 interface FileUploadProps {
   tenderId?: string
+  /** `company` = bedrijfsdocumenten (strategie, jaarplan); geen tender-koppeling */
+  variant?: 'tender' | 'company'
   onUploadComplete?: (file: { name: string; url: string; type: string }) => void
   accept?: string[]
 }
 
 export function FileUpload({
   tenderId,
+  variant = 'tender',
   onUploadComplete,
   accept = ALLOWED_TYPES,
 }: FileUploadProps) {
@@ -38,7 +41,11 @@ export function FileUpload({
     try {
       const formData = new FormData()
       formData.append('file', rawFile)
-      if (tenderId) formData.append('tenderId', tenderId)
+      if (variant === 'company') {
+        formData.append('scope', 'company')
+      } else if (tenderId) {
+        formData.append('tenderId', tenderId)
+      }
 
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -90,7 +97,7 @@ export function FileUpload({
         void uploadFile(newFiles[i], rawFile)
       })
     },
-    [tenderId, onUploadComplete]
+    [tenderId, variant, onUploadComplete]
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

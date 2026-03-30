@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { sql } from '@/lib/db'
 import { z } from 'zod'
 
@@ -88,6 +89,19 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    const message = err instanceof Error ? err.message : 'Database error'
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}
+
+/** Verwijdert alle tenders (analyses cascade; documenten/koppelingen worden losgelaten). */
+export async function DELETE() {
+  try {
+    const rows = await sql`DELETE FROM tenders RETURNING id`
+    revalidatePath('/dashboard/tenders')
+    revalidatePath('/dashboard')
+    return NextResponse.json({ deleted: rows.length })
+  } catch (err) {
     const message = err instanceof Error ? err.message : 'Database error'
     return NextResponse.json({ error: message }, { status: 500 })
   }
