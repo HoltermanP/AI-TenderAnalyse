@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { Brain, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
@@ -44,7 +44,7 @@ async function getErrorMessageFromResponse(
   return `${fallback} (HTTP ${res.status})`
 }
 
-export default function AnalysePage() {
+function AnalysePageContent() {
   const searchParams = useSearchParams()
   const [tenders, setTenders] = useState<TenderOption[]>([])
   const [selectedId, setSelectedId] = useState('')
@@ -210,5 +210,19 @@ export default function AnalysePage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function AnalysePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-12">
+          <LoadingSpinner size="lg" label="Analysepagina laden..." />
+        </div>
+      }
+    >
+      <AnalysePageContent />
+    </Suspense>
   )
 }
