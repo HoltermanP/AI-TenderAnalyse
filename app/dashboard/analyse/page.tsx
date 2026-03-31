@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { AnalysisPanel } from '@/components/analysis/AnalysisPanel'
 import type { Analysis } from '@/lib/db'
+import { useSearchParams } from 'next/navigation'
 
 interface TenderOption {
   id: string
@@ -13,7 +14,38 @@ interface TenderOption {
   contracting_authority: string | null
 }
 
+async function getErrorMessageFromResponse(
+  res: Response,
+  fallback: string
+): Promise<string> {
+  const contentType = res.headers.get('content-type') ?? ''
+
+  if (contentType.includes('application/json')) {
+    try {
+      const data = (await res.json()) as { error?: string; message?: string }
+      if (typeof data.error === 'string' && data.error.trim()) return data.error
+      if (typeof data.message === 'string' && data.message.trim()) return data.message
+    } catch {
+      // Fallback handled below
+    }
+  }
+
+  try {
+    const text = await res.text()
+    if (text.trim()) {
+      // Do not surface HTML error pages directly to users.
+      if (text.trimStart().startsWith('<')) return `${fallback} (HTTP ${res.status})`
+      return text.trim().slice(0, 200)
+    }
+  } catch {
+    // Ignore and fallback
+  }
+
+  return `${fallback} (HTTP ${res.status})`
+}
+
 export default function AnalysePage() {
+  const searchParams = useSearchParams()
   const [tenders, setTenders] = useState<TenderOption[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
@@ -35,6 +67,14 @@ export default function AnalysePage() {
     }
     void load()
   }, [])
+
+  useEffect(() => {
+    const tenderIdFromQuery = searchParams.get('tenderId')
+    if (!tenderIdFromQuery || tenderIdFromQuery === selectedId) return
+
+    setSelectedId(tenderIdFromQuery)
+    void loadAnalysis(tenderIdFromQuery)
+  }, [searchParams, selectedId])
 
   const loadAnalysis = async (id: string) => {
     if (!id) return
@@ -73,8 +113,7 @@ export default function AnalysePage() {
       })
 
       if (!res.ok) {
-        const err = (await res.json()) as { error?: string }
-        throw new Error(err.error ?? 'Analyse mislukt')
+        throw new Error(await getErrorMessageFromResponse(res, 'Analyse mislukt'))
       }
 
       const data = (await res.json()) as Analysis

@@ -22,7 +22,7 @@ interface ChatInterfaceProps {
 export function ChatInterface({
   tenderId,
   initialContext,
-  placeholder = 'Stel een vraag over tenders...',
+  placeholder = 'Stel je vraag over de tender...',
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -142,6 +142,48 @@ export function ChatInterface({
 
   return (
     <div className="flex flex-col h-full">
+      {/* Input area */}
+      <div className="border-b border-border-subtle p-4">
+        <div className="flex items-end gap-2">
+          {messages.length > 0 && (
+            <button
+              onClick={clearChat}
+              className="text-muted hover:text-velocity-red transition-colors p-2 rounded-md"
+              aria-label="Chat wissen"
+              title="Chat wissen"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          <div className="flex-1 min-w-0">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholder}
+              rows={1}
+              className="w-full resize-none bg-surface border border-border-subtle rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue transition-colors min-h-[44px] max-h-32"
+              style={{ height: Math.min(32 + input.split('\n').length * 20, 128) }}
+              aria-label="Chat bericht"
+              disabled={isLoading}
+            />
+            <p className="mt-2 px-1 text-[11px] leading-tight text-muted">
+              Enter om te versturen, Shift+Enter voor een nieuwe regel
+            </p>
+          </div>
+          <Button
+            onClick={() => void sendMessage()}
+            disabled={!input.trim() || isLoading}
+            loading={isLoading}
+            size="md"
+            aria-label="Verstuur bericht"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
       {/* Messages */}
       <div
         className="flex-1 overflow-y-auto py-4 space-y-4 min-h-0"
@@ -206,46 +248,6 @@ export function ChatInterface({
           </div>
         ))}
         <div ref={bottomRef} />
-      </div>
-
-      {/* Input area */}
-      <div className="border-t border-border-subtle p-4">
-        <div className="flex items-end gap-2">
-          {messages.length > 0 && (
-            <button
-              onClick={clearChat}
-              className="text-muted hover:text-velocity-red transition-colors p-2 rounded-md"
-              aria-label="Chat wissen"
-              title="Chat wissen"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            rows={1}
-            className="flex-1 resize-none bg-surface border border-border-subtle rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue transition-colors min-h-[44px] max-h-32"
-            style={{ height: Math.min(32 + input.split('\n').length * 20, 128) }}
-            aria-label="Chat bericht"
-            disabled={isLoading}
-          />
-          <Button
-            onClick={() => void sendMessage()}
-            disabled={!input.trim() || isLoading}
-            loading={isLoading}
-            size="md"
-            aria-label="Verstuur bericht"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
-        <p className="text-xs text-muted mt-2 text-center">
-          Enter om te versturen · Shift+Enter voor nieuwe regel
-        </p>
       </div>
     </div>
   )
