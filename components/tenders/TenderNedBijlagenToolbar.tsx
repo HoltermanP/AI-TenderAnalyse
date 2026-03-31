@@ -35,15 +35,38 @@ export function TenderNedBijlagenToolbar({
       const res = await fetch(`/api/tenders/${tenderId}/bijlagen/sync`, {
         method: 'POST',
       })
-      const data = (await res.json()) as {
+      const raw = await res.text()
+      let data: {
         error?: string
         added?: number
         skipped?: number
         totalListed?: number
         errors?: { documentNaam: string; error: string }[]
+      } = {}
+      if (raw) {
+        try {
+          data = JSON.parse(raw) as typeof data
+        } catch {
+          setError(
+            `Ongeldig antwoord (${res.status}). ${raw.slice(0, 280).trim() || res.statusText || 'Geen details'}`
+          )
+          return
+        }
+      } else if (!res.ok) {
+        setError(
+          res.status === 504 || res.status === 503
+            ? 'Server timeout — te veel of te grote bijlagen in één keer. Probeer opnieuw of sync in delen (Vercel: verhoog maxDuration of gebruik een Pro-plan).'
+            : `Synchroniseren mislukt (HTTP ${res.status}).`
+        )
+        return
       }
       if (!res.ok) {
-        setError(data.error ?? 'Synchroniseren mislukt')
+        setError(
+          data.error ??
+            (res.status === 504 || res.status === 503
+              ? 'Server timeout — probeer opnieuw of verlaag het aantal bijlagen per sync.'
+              : 'Synchroniseren mislukt')
+        )
         return
       }
       const parts = [
@@ -62,8 +85,13 @@ export function TenderNedBijlagenToolbar({
         )
       }
       router.refresh()
-    } catch {
-      setError('Netwerkfout bij synchroniseren')
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(
+        msg && msg !== 'Failed to fetch'
+          ? `Netwerkfout: ${msg}`
+          : 'Netwerkfout bij synchroniseren (geen verbinding met de server). Controleer internet en of de app draait.'
+      )
     } finally {
       setSyncing(false)
     }

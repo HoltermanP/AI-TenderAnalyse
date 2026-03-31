@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
-/** TenderNed kan veel bijlagen hebben; verleng op Vercel indien nodig. */
-export const maxDuration = 60
+/** TenderNed kan veel bijlagen hebben; Hobby-plan: max 10s tenzij je maxDuration verhoogt. */
+export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { syncTenderNedBijlagenToBlob } from '@/lib/syncTenderNedBijlagen'

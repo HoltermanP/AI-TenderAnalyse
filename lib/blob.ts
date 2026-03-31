@@ -1,5 +1,14 @@
 import { put, del, list } from '@vercel/blob'
 
+/** Vereist voor uploads (Vercel zet dit automatisch bij Blob-store; lokaal: token in .env.local). */
+export function assertBlobWriteToken(): void {
+  if (!process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
+    throw new Error(
+      'BLOB_READ_WRITE_TOKEN ontbreekt. Voeg in Vercel Storage → Blob aan je project toe, of kopieer de token naar .env.local voor lokale ontwikkeling.'
+    )
+  }
+}
+
 export interface UploadedFile {
   url: string
   pathname: string
@@ -11,6 +20,7 @@ export async function uploadFile(
   file: File,
   folder: string = 'uploads'
 ): Promise<UploadedFile> {
+  assertBlobWriteToken()
   const filename = `${folder}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
 
   const blob = await put(filename, file, {
@@ -32,6 +42,7 @@ export async function uploadBuffer(
   contentType: string,
   folder: string = 'exports'
 ): Promise<UploadedFile> {
+  assertBlobWriteToken()
   const pathname = `${folder}/${Date.now()}-${filename}`
 
   const blob = await put(pathname, buffer, {
