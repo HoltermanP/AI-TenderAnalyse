@@ -5,6 +5,13 @@ import { extractTextFromBuffer } from '@/lib/extractDocumentText'
 
 const TEXT_SLICE = 24_000
 
+function hasUsableSummary(summary: string | null | undefined): boolean {
+  if (!summary) return false
+  const trimmed = summary.trim()
+  if (!trimmed) return false
+  return !trimmed.startsWith('[')
+}
+
 /**
  * Zorgt dat elke bijlage op de blob een samenvatting heeft (voor analyse).
  * Ontbrekende summaries worden ingevuld via download + tekstextractie + AI.
@@ -18,7 +25,7 @@ export async function ensureDocumentSummariesForTender(tenderId: string): Promis
   const docs = rows as Pick<Document, 'id' | 'name' | 'type' | 'blob_url' | 'summary'>[]
 
   for (const doc of docs) {
-    if (doc.summary?.trim()) continue
+    if (hasUsableSummary(doc.summary)) continue
     if (!doc.blob_url) continue
 
     let buffer: Buffer
@@ -77,7 +84,7 @@ export async function ensureCompanyDocumentSummaries(): Promise<void> {
   const docs = rows as Pick<Document, 'id' | 'name' | 'type' | 'blob_url' | 'summary'>[]
 
   for (const doc of docs) {
-    if (doc.summary?.trim()) continue
+    if (hasUsableSummary(doc.summary)) continue
     if (!doc.blob_url) continue
 
     let buffer: Buffer

@@ -6,7 +6,15 @@ import {
   ensureCompanyDocumentSummaries,
   ensureDocumentSummariesForTender,
 } from '@/lib/ensureDocumentSummaries'
+import { syncTenderNedBijlagenToBlob } from '@/lib/syncTenderNedBijlagen'
 import type { Tender, CompanyInfo, LessonLearned } from '@/lib/db'
+
+function hasUsableSummary(summary: string | null | undefined): summary is string {
+  if (!summary) return false
+  const trimmed = summary.trim()
+  if (!trimmed) return false
+  return !trimmed.startsWith('[')
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -44,6 +52,29 @@ export async function POST(request: NextRequest) {
     }
     const tender = tenderRows[0] as Tender
 
+    // Voor TenderNed: als er nog geen blob-documenten gekoppeld zijn,
+    // probeer automatisch een sync zodat analyse de kernbijlagen kan meenemen.
+    if (tender.source === 'tenderned' && tender.external_id) {
+      const existingDocsRows = await sql`
+        SELECT COUNT(*)::int AS count
+        FROM documents
+        WHERE tender_id = ${tenderId}
+      `
+      const existingDocs = Number(
+        (existingDocsRows[0] as { count?: number | string } | undefined)?.count ?? 0
+      )
+      if (existingDocs === 0) {
+        const publicatieId = parseInt(String(tender.external_id), 10)
+        if (Number.isFinite(publicatieId) && publicatieId > 0) {
+          try {
+            await syncTenderNedBijlagenToBlob({ tenderId, publicatieId })
+          } catch {
+            // Analyse kan nog steeds doorgaan op tendertekst; foutafhandeling volgt later.
+          }
+        }
+      }
+    }
+
     // Fetch company info
     const companyRows = await sql`SELECT * FROM company_info LIMIT 1`
     const companyRow = (companyRows[0] as CompanyInfo | undefined) ?? {
@@ -77,6 +108,13 @@ export async function POST(request: NextRequest) {
     `
 
     // Run AI analysis
+    const usableTenderDocs = (docRows as { name: string; summary: string }[]).filter((d) =>
+      hasUsableSummary(d.summary)
+    )
+    const usableCompanyDocs = (companyDocRows as { name: string; summary: string }[]).filter((d) =>
+      hasUsableSummary(d.summary)
+    )
+
     const result = await analyseTender({
       tender: {
         title: tender.title,
@@ -93,13 +131,11 @@ export async function POST(request: NextRequest) {
         tenderned_bijlagen_count: tender.tenderned_bijlagen_count ?? null,
       },
       companyInfo: companyInfoFromDb(companyRow),
-      documentSummaries: (docRows as { name: string; summary: string }[]).map((d) => ({
+      documentSummaries: usableTenderDocs.map((d) => ({
         name: d.name,
         summary: d.summary,
       })),
-      companyDocumentSummaries: (
-        companyDocRows as { name: string; summary: string }[]
-      ).map((d) => ({
+      companyDocumentSummaries: usableCompanyDocs.map((d) => ({
         name: d.name,
         summary: d.summary,
       })),

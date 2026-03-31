@@ -201,6 +201,8 @@ Tone of voice voor alle tekstuele velden in de JSON (samenvatting, arrays, effor
 
   const userPrompt = `Analyseer de volgende tender.
 Formuleer de waarden van de JSON-tekstvelden consequent volgens de tone of voice uit de systeeminstructie.
+Gebruik alleen informatie die expliciet in de input staat. Verzin geen specifieke ontbrekende documenttypen.
+Als informatie ontbreekt, benoem dit neutraal en feitelijk op basis van de beschikbare context.
 
 TENDER INFORMATIE:
 Titel: ${input.tender.title}
