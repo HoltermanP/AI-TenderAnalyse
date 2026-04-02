@@ -4,6 +4,13 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    /** Vermijd webpack-bundling van pdfjs/canvas/tesseract (runtime errors in RSC/route bundles). */
+    serverComponentsExternalPackages: [
+      'tesseract.js',
+      'pdf-parse',
+      'pdfjs-dist',
+      '@napi-rs/canvas',
+    ],
   },
   images: {
     remotePatterns: [

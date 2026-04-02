@@ -1,10 +1,16 @@
 import { getDownloadUrl } from '@vercel/blob'
 import { sql } from '@/lib/db'
 import type { Document } from '@/lib/db'
-import { summariseCompanyProfileDocument, summariseDocument } from '@/lib/anthropic'
-import { extractTextFromBuffer } from '@/lib/extractDocumentText'
+import {
+  summariseCompanyPdfFromVision,
+  summariseCompanyProfileDocument,
+  summariseDocument,
+  summariseTenderPdfFromVision,
+} from '@/lib/anthropic'
+import { extractTextFromBuffer, isPdfDocument } from '@/lib/extractDocumentText'
 
-const TEXT_SLICE = 24_000
+/** Ruim genoeg voor leidraad + PvE in één samenvatting-aanroep (na ZIP-samenvoeging). */
+const TEXT_SLICE = 100_000
 /** Parallelle AI-samenvattingen (sneller binnen serverless-limiet) */
 const SUMMARY_CONCURRENCY = 3
 
@@ -57,6 +63,12 @@ async function summariseOneTenderDoc(
       summary = await summariseDocument(slice)
     } catch {
       summary = `[Samenvatting mislukt — bestand: ${doc.name}]`
+    }
+  } else if (isPdfDocument(buffer, doc.type, doc.name)) {
+    try {
+      summary = await summariseTenderPdfFromVision(buffer)
+    } catch {
+      summary = `[Geen leesbare tekst geëxtraheerd — bestand: ${doc.name} (${doc.type})]`
     }
   } else {
     summary = `[Geen leesbare tekst geëxtraheerd — bestand: ${doc.name} (${doc.type})]`
@@ -141,6 +153,12 @@ async function summariseOneCompanyDoc(
       summary = await summariseCompanyProfileDocument(slice)
     } catch {
       summary = `[Samenvatting mislukt — bestand: ${doc.name}]`
+    }
+  } else if (isPdfDocument(buffer, doc.type, doc.name)) {
+    try {
+      summary = await summariseCompanyPdfFromVision(buffer)
+    } catch {
+      summary = `[Geen leesbare tekst geëxtraheerd — bestand: ${doc.name} (${doc.type})]`
     }
   } else {
     summary = `[Geen leesbare tekst geëxtraheerd — bestand: ${doc.name} (${doc.type})]`

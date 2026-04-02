@@ -3,15 +3,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { uploadFile, validateFile } from '@/lib/blob'
 import { sql } from '@/lib/db'
 import {
+  summariseCompanyPdfFromVision,
   summariseCompanyProfileDocument,
   summariseDocument,
+  summariseTenderPdfFromVision,
 } from '@/lib/anthropic'
 import {
   extractTextFromBuffer,
+  isPdfDocument,
   MIN_EXTRACTED_TEXT_CHARS,
 } from '@/lib/extractDocumentText'
 
-const TEXT_SLICE = 24_000
+const TEXT_SLICE = 100_000
 
 async function summaryFromUploadedFile(
   file: File,
@@ -20,25 +23,36 @@ async function summaryFromUploadedFile(
   try {
     const buf = Buffer.from(await file.arrayBuffer())
     const raw = await extractTextFromBuffer(buf, file.type, file.name)
-    if (!raw) {
-      if (file.type === 'text/plain') {
-        const text = buf
-          .toString('utf-8')
-          .replace(/\u0000/g, '')
-          .trim()
-        if (text.length >= MIN_EXTRACTED_TEXT_CHARS) {
-          const slice = text.length > TEXT_SLICE ? text.slice(0, TEXT_SLICE) : text
-          return kind === 'company'
-            ? await summariseCompanyProfileDocument(slice)
-            : await summariseDocument(slice)
-        }
-      }
-      return null
+    if (raw) {
+      const slice = raw.length > TEXT_SLICE ? raw.slice(0, TEXT_SLICE) : raw
+      return kind === 'company'
+        ? await summariseCompanyProfileDocument(slice)
+        : await summariseDocument(slice)
     }
-    const slice = raw.length > TEXT_SLICE ? raw.slice(0, TEXT_SLICE) : raw
-    return kind === 'company'
-      ? await summariseCompanyProfileDocument(slice)
-      : await summariseDocument(slice)
+
+    if (isPdfDocument(buf, file.type, file.name)) {
+      try {
+        return kind === 'company'
+          ? await summariseCompanyPdfFromVision(buf)
+          : await summariseTenderPdfFromVision(buf)
+      } catch {
+        /* val verder terug op null / text/plain */
+      }
+    }
+
+    if (file.type === 'text/plain') {
+      const text = buf
+        .toString('utf-8')
+        .replace(/\u0000/g, '')
+        .trim()
+      if (text.length >= MIN_EXTRACTED_TEXT_CHARS) {
+        const slice = text.length > TEXT_SLICE ? text.slice(0, TEXT_SLICE) : text
+        return kind === 'company'
+          ? await summariseCompanyProfileDocument(slice)
+          : await summariseDocument(slice)
+      }
+    }
+    return null
   } catch {
     return null
   }

@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
+import type { MessageParam } from '@anthropic-ai/sdk/resources/messages'
+import { renderPdfFirstPagesPng } from '@/lib/pdfPageScreenshots'
 import { getToneOfVoiceInstruction } from '@/lib/toneOfVoice'
 import type { AnalysisDocumentCoverage } from '@/lib/analysisDocumentCoverage'
 
@@ -331,4 +333,60 @@ export async function summariseCompanyProfileDocument(
   const result = message.content[0]
   if (result.type !== 'text') throw new Error('Unexpected response type')
   return result.text
+}
+
+function pdfVisionMaxPages(): number {
+  return Math.min(Math.max(1, Number(process.env.PDF_VISION_MAX_PAGES) || 8), 12)
+}
+
+async function summarisePdfFromVisionWithInstruction(
+  pdfBuffer: Buffer,
+  instruction: string
+): Promise<string> {
+  const pngs = await renderPdfFirstPagesPng(pdfBuffer, pdfVisionMaxPages(), {
+    desiredWidth: 1100,
+  })
+  if (!pngs.length) throw new Error('Geen PDF-pagina’s gerenderd voor vision')
+
+  const content: MessageParam['content'] = [
+    { type: 'text', text: instruction },
+    ...pngs.map((png) => ({
+      type: 'image' as const,
+      source: {
+        type: 'base64' as const,
+        media_type: 'image/png' as const,
+        data: Buffer.from(png).toString('base64'),
+      },
+    })),
+  ]
+
+  const message = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 1536,
+    messages: [{ role: 'user', content }],
+  })
+  const result = message.content[0]
+  if (result.type !== 'text') throw new Error('Unexpected response type')
+  return result.text
+}
+
+/**
+ * Laatste redmiddel als tekst + OCR onvoldoende opleveren: eerste pagina’s als PNG naar Claude (vision).
+ * Gebruikt dezelfde Anthropic API-key; geen OpenAI nodig.
+ */
+export async function summariseTenderPdfFromVision(pdfBuffer: Buffer): Promise<string> {
+  const instruction =
+    `Je ziet rasterafbeeldingen van de eerste pagina's van een PDF-bijlage bij een aanbesteding. ` +
+    `Er kon onvoldoende betrouwbare platte tekst uit het bestand worden gehaald (bijv. scan of complexe lay-out). ` +
+    `Lees wat zichtbaar is (koppen, tabellen, voorwaarden, data) en maak een beknopte samenvatting voor tender-analyse: ` +
+    `vereisten, gunningcriteria, deadlines, prijs/budget, risico's, relevante specificaties. Antwoord in het Nederlands.`
+  return summarisePdfFromVisionWithInstruction(pdfBuffer, instruction)
+}
+
+export async function summariseCompanyPdfFromVision(pdfBuffer: Buffer): Promise<string> {
+  const instruction =
+    `Je ziet rasterafbeeldingen van de eerste pagina's van een bedrijfs-PDF. ` +
+    `Platte tekstextractie (inclusief OCR) leverde te weinig op. ` +
+    `Vat samen wat relevant is voor bid-analyse: strategie, competenties, doelen, sectoren, capaciteit. Antwoord in het Nederlands.`
+  return summarisePdfFromVisionWithInstruction(pdfBuffer, instruction)
 }
