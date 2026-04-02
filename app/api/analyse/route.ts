@@ -1,17 +1,51 @@
 export const dynamic = 'force-dynamic'
-/** Alleen hoofd-AI; sync + samenvattingen gebeurt in /api/tenders/[id]/analysis-prepare */
-export const maxDuration = 120
+/** Zelfde plafond als analysis-prepare: ensureDocumentSummariesForTender + hoofd-AI kan lang duren bij veel bijlagen. */
+export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { analyseTender, companyInfoFromDb } from '@/lib/anthropic'
 import { getAnalysisDocumentCoverage } from '@/lib/analysisDocumentCoverage'
+import {
+  ensureCompanyDocumentSummaries,
+  ensureDocumentSummariesForTender,
+} from '@/lib/ensureDocumentSummaries'
 import type { Tender, CompanyInfo, LessonLearned } from '@/lib/db'
 
-function hasUsableSummary(summary: string | null | undefined): summary is string {
+function summaryIsUsableForAnalysis(summary: string | null | undefined): boolean {
   if (!summary) return false
   const trimmed = summary.trim()
   if (!trimmed) return false
   return !trimmed.startsWith('[')
+}
+
+/** Elke bijlage in de prompt, ook bij mislukte extractie of ontbrekende summary (anders “ziet” de AI ze niet). */
+function summaryEntryForAnalysis(
+  name: string,
+  summary: string | null | undefined,
+  onBlobSynced: boolean
+): { name: string; summary: string } {
+  if (!onBlobSynced) {
+    return {
+      name,
+      summary:
+        'Niet beschikbaar als volledige bijlage in opslag (sync mislukt of nog bezig). Zie documentdekking.',
+    }
+  }
+  if (summary != null && summaryIsUsableForAnalysis(summary)) {
+    return { name, summary }
+  }
+  const fallback = summary?.trim()
+  if (fallback) {
+    return {
+      name,
+      summary: `Automatische verwerking onvolledig. ${fallback}`,
+    }
+  }
+  return {
+    name,
+    summary:
+      'Nog geen samenvatting (bijv. timeout of verwerking niet afgerond). Raadpleeg het bestand zelf indien nodig.',
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -50,6 +84,10 @@ export async function POST(request: NextRequest) {
     }
     const tender = tenderRows[0] as Tender
 
+    /** Opnieuw vullen vóór de hoofd-prompt: alle bijlagen op Blob moeten een bruikbare samenvatting hebben. */
+    await ensureCompanyDocumentSummaries()
+    await ensureDocumentSummariesForTender(tenderId)
+
     // Fetch company info
     const companyRows = await sql`SELECT * FROM company_info LIMIT 1`
     const companyRow = (companyRows[0] as CompanyInfo | undefined) ?? {
@@ -73,23 +111,45 @@ export async function POST(request: NextRequest) {
       tender.tenderned_bijlagen_count ?? null
     )
 
-    const docRows = await sql`
-      SELECT name, summary FROM documents
-      WHERE tender_id = ${tenderId} AND summary IS NOT NULL AND TRIM(summary) <> ''
-    `
+    const docRows = (await sql`
+      SELECT name, summary, blob_status, blob_url
+      FROM documents
+      WHERE tender_id = ${tenderId}
+        AND source IN ('upload', 'tenderned')
+      ORDER BY created_at ASC
+    `) as {
+      name: string
+      summary: string | null
+      blob_status: string
+      blob_url: string | null
+    }[]
 
-    const companyDocRows = await sql`
-      SELECT name, summary FROM documents
+    const companyDocRows = (await sql`
+      SELECT name, summary, blob_status, blob_url
+      FROM documents
       WHERE tender_id IS NULL AND source = 'company'
-        AND summary IS NOT NULL AND TRIM(summary) <> ''
-    `
+      ORDER BY created_at ASC
+    `) as {
+      name: string
+      summary: string | null
+      blob_status: string
+      blob_url: string | null
+    }[]
 
-    // Run AI analysis
-    const usableTenderDocs = (docRows as { name: string; summary: string }[]).filter((d) =>
-      hasUsableSummary(d.summary)
+    const tenderSummariesForPrompt = docRows.map((d) =>
+      summaryEntryForAnalysis(
+        d.name,
+        d.summary,
+        d.blob_status === 'synced' && Boolean(d.blob_url)
+      )
     )
-    const usableCompanyDocs = (companyDocRows as { name: string; summary: string }[]).filter((d) =>
-      hasUsableSummary(d.summary)
+
+    const companySummariesForPrompt = companyDocRows.map((d) =>
+      summaryEntryForAnalysis(
+        d.name,
+        d.summary,
+        d.blob_status === 'synced' && Boolean(d.blob_url)
+      )
     )
 
     const result = await analyseTender({
@@ -108,14 +168,8 @@ export async function POST(request: NextRequest) {
         tenderned_bijlagen_count: tender.tenderned_bijlagen_count ?? null,
       },
       companyInfo: companyInfoFromDb(companyRow),
-      documentSummaries: usableTenderDocs.map((d) => ({
-        name: d.name,
-        summary: d.summary,
-      })),
-      companyDocumentSummaries: usableCompanyDocs.map((d) => ({
-        name: d.name,
-        summary: d.summary,
-      })),
+      documentSummaries: tenderSummariesForPrompt,
+      companyDocumentSummaries: companySummariesForPrompt,
       lessonsLearned: lessons.map(
         (l) => `[${l.outcome.toUpperCase()}] ${l.title}: ${l.description}`
       ),

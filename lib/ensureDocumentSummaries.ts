@@ -1,3 +1,4 @@
+import { getDownloadUrl } from '@vercel/blob'
 import { sql } from '@/lib/db'
 import type { Document } from '@/lib/db'
 import { summariseCompanyProfileDocument, summariseDocument } from '@/lib/anthropic'
@@ -23,7 +24,9 @@ async function summariseOneTenderDoc(
 
   let buffer: Buffer
   try {
-    const res = await fetch(doc.blob_url!, { redirect: 'follow' })
+    const res = await fetch(getDownloadUrl(doc.blob_url!), {
+      redirect: 'follow',
+    })
     if (!res.ok) {
       await sql`
         UPDATE documents
@@ -120,7 +123,9 @@ export async function ensureCompanyDocumentSummaries(): Promise<void> {
 
     let buffer: Buffer
     try {
-      const res = await fetch(doc.blob_url, { redirect: 'follow' })
+      const res = await fetch(getDownloadUrl(doc.blob_url), {
+        redirect: 'follow',
+      })
       if (!res.ok) {
         await sql`
           UPDATE documents SET summary_status = 'failed' WHERE id = ${doc.id}

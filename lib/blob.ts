@@ -1,9 +1,32 @@
 import { randomUUID } from 'crypto'
 import { put, del, list } from '@vercel/blob'
 
+/** Boven deze grootte gebruikt de SDK multipart-upload (aanbevolen op Vercel voor grotere PDF’s). */
+const BLOB_MULTIPART_THRESHOLD_BYTES = 4 * 1024 * 1024
+
+function blobWriteToken(): string | undefined {
+  const t = process.env.BLOB_READ_WRITE_TOKEN?.trim()
+  return t || undefined
+}
+
+function putOptions(
+  contentType: string,
+  bodySize: number
+): Parameters<typeof put>[2] {
+  const token = blobWriteToken()
+  return {
+    access: 'public',
+    contentType,
+    ...(token ? { token } : {}),
+    ...(bodySize > BLOB_MULTIPART_THRESHOLD_BYTES ?
+      { multipart: true as const }
+    : {}),
+  }
+}
+
 /** Vereist voor uploads (Vercel zet dit automatisch bij Blob-store; lokaal: token in .env.local). */
 export function assertBlobWriteToken(): void {
-  if (!process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
+  if (!blobWriteToken()) {
     throw new Error(
       'BLOB_READ_WRITE_TOKEN ontbreekt. Voeg in Vercel Storage → Blob aan je project toe, of kopieer de token naar .env.local voor lokale ontwikkeling.'
     )
@@ -24,10 +47,7 @@ export async function uploadFile(
   assertBlobWriteToken()
   const filename = `${folder}/${Date.now()}-${randomUUID()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
 
-  const blob = await put(filename, file, {
-    access: 'public',
-    contentType: file.type,
-  })
+  const blob = await put(filename, file, putOptions(file.type, file.size))
 
   return {
     url: blob.url,
@@ -46,10 +66,7 @@ export async function uploadBuffer(
   assertBlobWriteToken()
   const pathname = `${folder}/${Date.now()}-${randomUUID()}-${filename}`
 
-  const blob = await put(pathname, buffer, {
-    access: 'public',
-    contentType,
-  })
+  const blob = await put(pathname, buffer, putOptions(contentType, buffer.length))
 
   return {
     url: blob.url,

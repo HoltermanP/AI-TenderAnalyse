@@ -29,7 +29,8 @@ const MAX_POLL_ATTEMPTS = 72
 
 function gammaBaseUrl(): string {
   const raw = process.env.GAMMA_API_URL ?? DEFAULT_GAMMA_BASE
-  return raw.replace(/\/$/, '')
+  // Support both host-only URLs and URLs that already include /v1 or /v1.0.
+  return raw.replace(/\/v1(?:\.0)?\/?$/, '').replace(/\/$/, '')
 }
 
 function presentationToInputText(input: GammaPresentationInput): string {
@@ -56,6 +57,52 @@ interface GammaGenerationStatus {
   error?: unknown
 }
 
+function generationCreatePaths(base: string): string[] {
+  return [`${base}/v1.0/generations`, `${base}/generations`]
+}
+
+function generationStatusPaths(base: string, generationId: string): string[] {
+  return [`${base}/v1.0/generations/${generationId}`, `${base}/generations/${generationId}`]
+}
+
+async function tryPostGeneration(
+  paths: string[],
+  apiKey: string,
+  body: Record<string, unknown>
+): Promise<Response> {
+  let lastResponse: Response | null = null
+  for (let index = 0; index < paths.length; index++) {
+    const res = await fetch(paths[index], {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': apiKey,
+      },
+      body: JSON.stringify(body),
+    })
+    // Retry with alternate path only on 404; other responses are definitive.
+    if (res.status !== 404) {
+      return res
+    }
+    lastResponse = res
+  }
+  return lastResponse ?? new Response(null, { status: 404, statusText: 'Not Found' })
+}
+
+async function tryGetGeneration(paths: string[], apiKey: string): Promise<Response> {
+  let lastResponse: Response | null = null
+  for (let index = 0; index < paths.length; index++) {
+    const res = await fetch(paths[index], {
+      headers: { 'X-API-KEY': apiKey },
+    })
+    if (res.status !== 404) {
+      return res
+    }
+    lastResponse = res
+  }
+  return lastResponse ?? new Response(null, { status: 404, statusText: 'Not Found' })
+}
+
 export async function createPresentation(
   input: GammaPresentationInput
 ): Promise<GammaPresentationResult> {
@@ -80,14 +127,11 @@ export async function createPresentation(
     body.themeId = themeId
   }
 
-  const startRes = await fetch(`${base}/v1.0/generations`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-KEY': apiKey,
-    },
-    body: JSON.stringify(body),
-  })
+  const startRes = await tryPostGeneration(
+    generationCreatePaths(base),
+    apiKey,
+    body
+  )
 
   if (!startRes.ok) {
     const detail = await startRes.text().catch(() => '')
@@ -104,9 +148,10 @@ export async function createPresentation(
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
     await sleep(POLL_INTERVAL_MS)
 
-    const statusRes = await fetch(`${base}/v1.0/generations/${generationId}`, {
-      headers: { 'X-API-KEY': apiKey },
-    })
+    const statusRes = await tryGetGeneration(
+      generationStatusPaths(base, generationId),
+      apiKey
+    )
 
     if (!statusRes.ok) {
       throw new Error(
