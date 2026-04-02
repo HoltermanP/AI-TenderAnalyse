@@ -1,12 +1,10 @@
 export const dynamic = 'force-dynamic'
+/** Alleen hoofd-AI; sync + samenvattingen gebeurt in /api/tenders/[id]/analysis-prepare */
+export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { analyseTender, companyInfoFromDb } from '@/lib/anthropic'
-import {
-  ensureCompanyDocumentSummaries,
-  ensureDocumentSummariesForTender,
-} from '@/lib/ensureDocumentSummaries'
-import { syncTenderNedBijlagenToBlob } from '@/lib/syncTenderNedBijlagen'
+import { getAnalysisDocumentCoverage } from '@/lib/analysisDocumentCoverage'
 import type { Tender, CompanyInfo, LessonLearned } from '@/lib/db'
 
 function hasUsableSummary(summary: string | null | undefined): summary is string {
@@ -52,29 +50,6 @@ export async function POST(request: NextRequest) {
     }
     const tender = tenderRows[0] as Tender
 
-    // Voor TenderNed: als er nog geen blob-documenten gekoppeld zijn,
-    // probeer automatisch een sync zodat analyse de kernbijlagen kan meenemen.
-    if (tender.source === 'tenderned' && tender.external_id) {
-      const existingDocsRows = await sql`
-        SELECT COUNT(*)::int AS count
-        FROM documents
-        WHERE tender_id = ${tenderId}
-      `
-      const existingDocs = Number(
-        (existingDocsRows[0] as { count?: number | string } | undefined)?.count ?? 0
-      )
-      if (existingDocs === 0) {
-        const publicatieId = parseInt(String(tender.external_id), 10)
-        if (Number.isFinite(publicatieId) && publicatieId > 0) {
-          try {
-            await syncTenderNedBijlagenToBlob({ tenderId, publicatieId })
-          } catch {
-            // Analyse kan nog steeds doorgaan op tendertekst; foutafhandeling volgt later.
-          }
-        }
-      }
-    }
-
     // Fetch company info
     const companyRows = await sql`SELECT * FROM company_info LIMIT 1`
     const companyRow = (companyRows[0] as CompanyInfo | undefined) ?? {
@@ -93,8 +68,10 @@ export async function POST(request: NextRequest) {
     `
     const lessons = lessonsRows as Pick<LessonLearned, 'title' | 'description' | 'outcome'>[]
 
-    await ensureCompanyDocumentSummaries()
-    await ensureDocumentSummariesForTender(tenderId)
+    const documentCoverage = await getAnalysisDocumentCoverage(
+      tenderId,
+      tender.tenderned_bijlagen_count ?? null
+    )
 
     const docRows = await sql`
       SELECT name, summary FROM documents
@@ -143,6 +120,7 @@ export async function POST(request: NextRequest) {
         (l) => `[${l.outcome.toUpperCase()}] ${l.title}: ${l.description}`
       ),
       toneOfVoice: tender.tone_of_voice ?? null,
+      documentCoverage,
     })
 
     // Save / update analysis

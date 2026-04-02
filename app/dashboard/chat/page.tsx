@@ -18,9 +18,7 @@ export default function ChatPage() {
       </div>
 
       <div className="flex-1 card overflow-hidden">
-        <ChatInterface
-          placeholder="Stel je vraag over deze tender..."
-        />
+        <ChatInterface />
       </div>
     </div>
   )

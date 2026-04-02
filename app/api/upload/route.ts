@@ -67,8 +67,17 @@ export async function POST(request: NextRequest) {
 
     const source = isCompany ? 'company' : 'upload'
 
+    const summaryOk =
+      summary &&
+      summary.trim() !== '' &&
+      !summary.trim().startsWith('[')
+    const summaryStatus = summaryOk ? 'done' : summary ? 'failed' : 'pending'
+
     const rows = await sql`
-      INSERT INTO documents (tender_id, name, type, size, blob_url, summary, source)
+      INSERT INTO documents (
+        tender_id, name, type, size, blob_url, summary, source,
+        blob_status, summary_status
+      )
       VALUES (
         ${tenderId},
         ${file.name},
@@ -76,7 +85,9 @@ export async function POST(request: NextRequest) {
         ${file.size},
         ${uploaded.url},
         ${summary},
-        ${source}
+        ${source},
+        'synced',
+        ${summaryStatus}
       )
       RETURNING id, name, blob_url, created_at, summary
     `

@@ -364,7 +364,8 @@ export async function getPublicationAsTender(
 // ——— Publicatie-documenten (bijlagen) ———
 
 export interface TnsPublicationDocument {
-  documentId: string
+  /** Hash-id uit TNS; soms ontbreekt deze in oudere responses */
+  documentId?: string
   documentNaam: string
   typeDocument?: { code?: string; omschrijving?: string }
   grootte?: number

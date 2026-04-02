@@ -1,10 +1,8 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { Document, renderToBuffer } from '@react-pdf/renderer'
-import React from 'react'
 import { sql } from '@/lib/db'
 import type { Tender, Analysis, CompanyInfo } from '@/lib/db'
-import { TenderAnalysisPdfDocument } from '@/lib/pdf/TenderAnalysisPdfDocument'
+import { buildAnalysisDocxBuffer } from '@/lib/analysisDocx'
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,28 +33,27 @@ export async function POST(request: NextRequest) {
       year: 'numeric',
     })
 
-    const buffer = await renderToBuffer(
-      React.createElement(TenderAnalysisPdfDocument, {
-        tender,
-        analysis,
-        company,
-        generatedDate,
-      }) as React.ReactElement<React.ComponentProps<typeof Document>>
-    )
+    const buffer = await buildAnalysisDocxBuffer({
+      tender,
+      analysis,
+      company,
+      generatedDate,
+    })
 
-    const safeName = `tender-analyse-${tender.id.slice(0, 8)}.pdf`
+    const safeName = `tender-analyse-${tender.id.slice(0, 8)}.docx`
     const encoded = encodeURIComponent(safeName)
 
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
-        'Content-Type': 'application/pdf',
+        'Content-Type':
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="${safeName}"; filename*=UTF-8''${encoded}`,
         'Cache-Control': 'no-store',
       },
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'PDF genereren mislukt'
+    const message = err instanceof Error ? err.message : 'Word-export mislukt'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

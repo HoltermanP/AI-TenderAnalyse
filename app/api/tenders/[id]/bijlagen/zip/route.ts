@@ -29,6 +29,8 @@ export async function GET(
   const docs = (await sql`
     SELECT name, blob_url FROM documents
     WHERE tender_id = ${params.id}
+      AND blob_url IS NOT NULL
+      AND blob_status = 'synced'
     ORDER BY created_at ASC
   `) as { name: string; blob_url: string }[]
 

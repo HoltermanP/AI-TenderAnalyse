@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Brain, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useRouter } from 'next/navigation'
+import { emitTenderDocumentsProgress } from '@/lib/tenderDocumentEvents'
 
 interface StartAnalysisButtonProps {
   tenderId: string
@@ -53,8 +54,18 @@ export function StartAnalysisButton({
   const handleAnalyse = async () => {
     setLoading(true)
     setError(null)
+    emitTenderDocumentsProgress(tenderId, 'start')
 
     try {
+      const prep = await fetch(
+        `/api/tenders/${encodeURIComponent(tenderId)}/analysis-prepare`,
+        { method: 'POST' }
+      )
+      if (!prep.ok) {
+        throw new Error(
+          await getErrorMessageFromResponse(prep, 'Voorbereiden mislukt'))
+      }
+
       const res = await fetch(`/api/analyse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,6 +81,7 @@ export function StartAnalysisButton({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Onbekende fout')
     } finally {
+      emitTenderDocumentsProgress(tenderId, 'end')
       setLoading(false)
     }
   }

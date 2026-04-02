@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getToneOfVoiceInstruction } from '@/lib/toneOfVoice'
+import type { AnalysisDocumentCoverage } from '@/lib/analysisDocumentCoverage'
 
 // apiKey defaults to process.env.ANTHROPIC_API_KEY — throws at call time if missing
 export const anthropic = new Anthropic({
@@ -50,6 +51,8 @@ export interface TenderAnalysisInput {
   lessonsLearned?: string[]
   /** Per tender: beïnvloedt formulering van analyse (tekstvelden in JSON) */
   toneOfVoice?: string | null
+  /** Feiten over verwerkte bijlagen (voorkomt foute conclusies bij gedeeltelijke sync) */
+  documentCoverage?: AnalysisDocumentCoverage | null
 }
 
 export interface TenderAnalysisResult {
@@ -199,6 +202,19 @@ Tone of voice voor alle tekstuele velden in de JSON (samenvatting, arrays, effor
         .join('\n\n')}`
     : ''
 
+  const c = input.documentCoverage
+  const coverageBlock =
+    c ?
+      `DOCUMENTDEKKING (feitelijk, database + TenderNed-catalogus):
+- TenderNed-catalogus: ${c.catalogCount != null ? `${c.catalogCount} documenten` : 'niet bekend'}
+- Bijlagen gekoppeld aan deze tender in de app: ${c.inAppTotal}
+- Opgeslagen op Blob (synced): ${c.syncedBlob}
+- Met bruikbare AI-samenvatting in deze analyse: ${c.usableForAnalysis}
+${c.issueLines.length ? `- Verwerking niet geslaagd of onvolledig: ${c.issueLines.join('; ')}` : ''}
+(Hanteer deze aantallen strikt. Als het aantal bruikbare samenvattingen lager is dan de catalogus, geef dat technisch/neutraal weer — geen aanname dat ontbrekende stukken “nog opgevraagd” kunnen worden tenzij dat in de input staat.)
+`
+    : ''
+
   const userPrompt = `Analyseer de volgende tender.
 Formuleer de waarden van de JSON-tekstvelden consequent volgens de tone of voice uit de systeeminstructie.
 Gebruik alleen informatie die expliciet in de input staat. Verzin geen specifieke ontbrekende documenttypen.
@@ -216,6 +232,8 @@ ${buildCompanyInfoPrompt(input.companyInfo)}
 
 ${bedrijfsDocsBlock}
 
+${coverageBlock}
+
 ${bijlagenBlock}
 
 ${input.lessonsLearned?.length ? `LESSONS LEARNED:\n${input.lessonsLearned.join('\n\n')}` : ''}
@@ -230,7 +248,7 @@ Geef de analyse terug als JSON met dit formaat:
   "risks": ["<risico1>", "<risico2>"],
   "opportunities": ["<kans1>", "<kans2>"],
   "win_probability": <0-100>,
-  "effort_estimate": "<laag|gemiddeld|hoog> - <toelichting>"
+  "effort_estimate": "<laag|gemiddeld|hoog> - <korte toelichting, maximaal ca. 500 tekens>"
 }`
 
   const message = await anthropic.messages.create({

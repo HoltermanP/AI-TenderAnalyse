@@ -2,12 +2,60 @@ import type { TnsPublicationDocument } from '@/lib/tenderned'
 import type { Document } from '@/lib/db'
 import { Badge } from '@/components/ui/Badge'
 import { fileTypeIcon, formatFileSize } from '@/lib/utils'
-import { Download, Eye } from 'lucide-react'
+import { Download, Eye, Loader2 } from 'lucide-react'
 
 interface TenderNedBijlagenCatalogProps {
   documents: TnsPublicationDocument[]
-  /** external_document_id → opgeslagen document */
+  /** external_document_id → opgeslagen document (inclusief tussentijdse downloadstatus) */
   syncedByExternalId: Map<string, Document>
+}
+
+function blobSummaryBadges(stored: Document) {
+  if (stored.blob_status === 'downloading') {
+    return (
+      <Badge variant="neutral" className="text-xs gap-1">
+        <Loader2 className="w-3 h-3 animate-spin shrink-0" aria-hidden />
+        Downloaden naar opslag…
+      </Badge>
+    )
+  }
+  if (stored.blob_status === 'failed') {
+    return (
+      <Badge variant="neutral" className="text-xs text-velocity-red">
+        Download mislukt
+      </Badge>
+    )
+  }
+  if (stored.blob_status === 'synced' && stored.summary_status === 'processing') {
+    return (
+      <Badge variant="neutral" className="text-xs gap-1">
+        <Loader2 className="w-3 h-3 animate-spin shrink-0" aria-hidden />
+        AI-samenvatting…
+      </Badge>
+    )
+  }
+  if (stored.blob_status === 'synced' && stored.summary_status === 'pending') {
+    return (
+      <Badge variant="neutral" className="text-xs">
+        Op opslag, samenvatting volgt…
+      </Badge>
+    )
+  }
+  if (stored.blob_status === 'synced' && stored.summary_status === 'failed') {
+    return (
+      <Badge variant="neutral" className="text-xs text-velocity-red">
+        Samenvatting mislukt
+      </Badge>
+    )
+  }
+  if (stored.blob_status === 'synced' && stored.summary_status === 'done' && stored.blob_url) {
+    return (
+      <Badge variant="success" className="text-xs">
+        Opgeslagen op Blob
+      </Badge>
+    )
+  }
+  return null
 }
 
 export function TenderNedBijlagenCatalog({
@@ -40,6 +88,7 @@ export function TenderNedBijlagenCatalog({
           ? syncedByExternalId.get(doc.documentId)
           : undefined
         const mime = stored?.type ?? 'application/octet-stream'
+        const canOpen = Boolean(stored?.blob_url && stored.blob_status === 'synced')
 
         return (
           <li key={doc.documentId ?? title}>
@@ -71,9 +120,7 @@ export function TenderNedBijlagenCatalog({
                     </Badge>
                   )}
                   {stored ? (
-                    <Badge variant="success" className="text-xs">
-                      Opgeslagen op Blob
-                    </Badge>
+                    blobSummaryBadges(stored)
                   ) : hasHref && !virus ? (
                     <Badge variant="neutral" className="text-xs">
                       Nog niet opgeslagen
@@ -81,7 +128,7 @@ export function TenderNedBijlagenCatalog({
                   ) : null}
                 </div>
               </div>
-              {stored && (
+              {canOpen && stored?.blob_url && (
                 <div className="flex items-center gap-1 shrink-0 self-center">
                   <a
                     href={stored.blob_url}

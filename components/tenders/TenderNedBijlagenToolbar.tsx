@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Download, FileArchive, Loader2 } from 'lucide-react'
+import { emitTenderDocumentsProgress } from '@/lib/tenderDocumentEvents'
 
 interface TenderNedBijlagenToolbarProps {
   tenderId: string
@@ -31,6 +32,7 @@ export function TenderNedBijlagenToolbar({
     setSyncing(true)
     setMessage(null)
     setError(null)
+    emitTenderDocumentsProgress(tenderId, 'start')
     try {
       const res = await fetch(`/api/tenders/${tenderId}/bijlagen/sync`, {
         method: 'POST',
@@ -93,6 +95,7 @@ export function TenderNedBijlagenToolbar({
           : 'Netwerkfout bij synchroniseren (geen verbinding met de server). Controleer internet en of de app draait.'
       )
     } finally {
+      emitTenderDocumentsProgress(tenderId, 'end')
       setSyncing(false)
     }
   }

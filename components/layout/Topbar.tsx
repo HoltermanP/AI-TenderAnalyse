@@ -1,7 +1,7 @@
 'use client'
 
 import { Bell, Sun, Moon, Contrast, Menu } from 'lucide-react'
-import { useTheme } from '@/components/providers/ThemeProvider'
+import { useTheme, type Theme } from '@/components/providers/ThemeProvider'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 
@@ -9,8 +9,6 @@ interface TopbarProps {
   title?: string
   onMobileMenuToggle?: () => void
 }
-
-type Theme = 'dark' | 'medium' | 'light'
 
 export function Topbar({ title, onMobileMenuToggle }: TopbarProps) {
   const { theme, setTheme } = useTheme()

@@ -1,6 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from 'react'
 import { Send, Bot, User, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import ReactMarkdown from 'react-markdown'
@@ -22,7 +28,7 @@ interface ChatInterfaceProps {
 export function ChatInterface({
   tenderId,
   initialContext,
-  placeholder = 'Stel je vraag over de tender...',
+  placeholder = 'Stel je vraag',
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -30,6 +36,37 @@ export function ChatInterface({
   const [sessionId] = useState(() => generateSessionId())
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const inputMeasureRef = useRef<HTMLDivElement>(null)
+  const inputWrapRef = useRef<HTMLDivElement>(null)
+  const [inputHeightPx, setInputHeightPx] = useState(44)
+  const [inputScrollable, setInputScrollable] = useState(false)
+
+  const INPUT_MAX_HEIGHT_TYPED = 128
+
+  useLayoutEffect(() => {
+    const mirror = inputMeasureRef.current
+    const wrap = inputWrapRef.current
+    if (!mirror) return
+
+    const measure = () => {
+      const raw = mirror.offsetHeight
+      const full = Math.max(raw, 44)
+      if (input === '') {
+        setInputHeightPx(full)
+        setInputScrollable(false)
+        return
+      }
+      const capped = Math.min(full, INPUT_MAX_HEIGHT_TYPED)
+      setInputHeightPx(capped)
+      setInputScrollable(full > INPUT_MAX_HEIGHT_TYPED)
+    }
+
+    measure()
+    if (!wrap) return
+    const ro = new ResizeObserver(measure)
+    ro.observe(wrap)
+    return () => ro.disconnect()
+  }, [input, placeholder])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -155,7 +192,14 @@ export function ChatInterface({
               <Trash2 className="w-4 h-4" />
             </button>
           )}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 relative" ref={inputWrapRef}>
+            <div
+              ref={inputMeasureRef}
+              className="pointer-events-none invisible absolute left-0 right-0 top-0 z-0 w-full box-border min-h-[44px] rounded-lg border border-transparent px-4 py-3 text-sm leading-normal whitespace-pre-wrap break-words"
+              aria-hidden
+            >
+              {input || placeholder}
+            </div>
             <textarea
               ref={inputRef}
               value={input}
@@ -163,8 +207,11 @@ export function ChatInterface({
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
               rows={1}
-              className="w-full resize-none bg-surface border border-border-subtle rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue transition-colors min-h-[44px] max-h-32"
-              style={{ height: Math.min(32 + input.split('\n').length * 20, 128) }}
+              className={cn(
+                'relative z-10 w-full resize-none bg-surface border border-border-subtle rounded-lg px-4 py-3 text-sm leading-normal text-foreground placeholder:text-muted focus:outline-none focus:border-ai-blue transition-colors min-h-[44px]',
+                inputScrollable ? 'overflow-y-auto' : 'overflow-hidden'
+              )}
+              style={{ height: inputHeightPx }}
               aria-label="Chat bericht"
               disabled={isLoading}
             />

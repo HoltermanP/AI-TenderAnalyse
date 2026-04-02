@@ -5,8 +5,10 @@ import { Brain, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { AnalysisPanel } from '@/components/analysis/AnalysisPanel'
+import { AnalysisActionsToolbar } from '@/components/analysis/AnalysisActionsToolbar'
 import type { Analysis } from '@/lib/db'
 import { useSearchParams } from 'next/navigation'
+import { emitTenderDocumentsProgress } from '@/lib/tenderDocumentEvents'
 
 interface TenderOption {
   id: string
@@ -52,6 +54,35 @@ function AnalysePageContent() {
   const [loading, setLoading] = useState(false)
   const [analysing, setAnalysing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mailEnabled, setMailEnabled] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/settings')
+        if (!res.ok || cancelled) return
+        const s = (await res.json()) as {
+          smtp_mail_enabled?: boolean
+          smtp_host?: string | null
+          smtp_from_email?: string | null
+          smtp_password_set?: boolean
+        }
+        if (cancelled) return
+        setMailEnabled(
+          s.smtp_mail_enabled === true &&
+            !!s.smtp_host?.trim() &&
+            !!s.smtp_from_email?.trim() &&
+            s.smtp_password_set === true
+        )
+      } catch {
+        if (!cancelled) setMailEnabled(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -104,8 +135,18 @@ function AnalysePageContent() {
     if (!selectedId) return
     setAnalysing(true)
     setError(null)
+    emitTenderDocumentsProgress(selectedId, 'start')
 
     try {
+      const prep = await fetch(
+        `/api/tenders/${encodeURIComponent(selectedId)}/analysis-prepare`,
+        { method: 'POST' }
+      )
+      if (!prep.ok) {
+        throw new Error(
+          await getErrorMessageFromResponse(prep, 'Voorbereiden mislukt'))
+      }
+
       const res = await fetch('/api/analyse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,6 +162,7 @@ function AnalysePageContent() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Onbekende fout')
     } finally {
+      emitTenderDocumentsProgress(selectedId, 'end')
       setAnalysing(false)
     }
   }
@@ -197,8 +239,20 @@ function AnalysePageContent() {
         </div>
       )}
 
-      {analysis && !analysing && (
-        <AnalysisPanel analysis={analysis} />
+      {analysis && !analysing && selectedId && (
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <h2 className="text-lg font-semibold font-grotesk text-foreground flex items-center gap-2">
+              <Brain className="w-5 h-5 text-blue-light" />
+              Resultaat
+            </h2>
+            <AnalysisActionsToolbar
+              tenderId={selectedId}
+              mailEnabled={mailEnabled}
+            />
+          </div>
+          <AnalysisPanel analysis={analysis} />
+        </div>
       )}
 
       {!selectedId && (

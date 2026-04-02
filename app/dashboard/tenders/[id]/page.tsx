@@ -11,9 +11,6 @@ import {
   formatDate,
   daysUntil,
   statusToLabel,
-  fileTypeIcon,
-  formatFileSize,
-  filenameTitleAndExtension,
 } from '@/lib/utils'
 import {
   Calendar,
@@ -22,15 +19,13 @@ import {
   ExternalLink,
   Brain,
   FileText,
-  Download,
-  Eye,
 } from 'lucide-react'
 import Link from 'next/link'
 import { StartAnalysisButton } from '@/components/analysis/StartAnalysisButton'
 import { TenderNedBijlagenToolbar } from '@/components/tenders/TenderNedBijlagenToolbar'
 import { DeleteTenderButton } from '@/components/tenders/DeleteTenderButton'
-import { GeneratePdfButton } from '@/components/pdf/GeneratePdfButton'
-import { TenderNedBijlagenCatalog } from '@/components/tenders/TenderNedBijlagenCatalog'
+import { AnalysisActionsToolbar } from '@/components/analysis/AnalysisActionsToolbar'
+import { TenderDocumentsLiveSection } from '@/components/tenders/TenderDocumentsLiveSection'
 import { TenderToneOfVoiceSelect } from '@/components/tenders/TenderToneOfVoiceSelect'
 import {
   fetchPublicationDocumenten,
@@ -62,6 +57,7 @@ export default async function TenderDetailPage({
   let documents: Document[] = []
   let tnsDocuments: TnsPublicationDocument[] | null = null
   let tnsDocumentsError: string | null = null
+  let mailEnabled = false
 
   try {
     const tRows = await sql`SELECT * FROM tenders WHERE id = ${params.id}`
@@ -89,6 +85,31 @@ export default async function TenderDetailPage({
         }
       }
     }
+    try {
+      const sRows = await sql`
+        SELECT smtp_mail_enabled, smtp_host, smtp_from_email,
+          (smtp_password IS NOT NULL AND smtp_password <> '') AS smtp_password_set
+        FROM app_settings
+        LIMIT 1
+      `
+      const s = sRows[0] as
+        | {
+            smtp_mail_enabled: boolean
+            smtp_host: string | null
+            smtp_from_email: string | null
+            smtp_password_set: boolean
+          }
+        | undefined
+      if (s) {
+        mailEnabled =
+          s.smtp_mail_enabled === true &&
+          !!s.smtp_host?.trim() &&
+          !!s.smtp_from_email?.trim() &&
+          s.smtp_password_set === true
+      }
+    } catch {
+      mailEnabled = false
+    }
   } catch {
     notFound()
   }
@@ -96,13 +117,6 @@ export default async function TenderDetailPage({
   if (!tender) notFound()
 
   const days = tender.deadline ? daysUntil(tender.deadline) : null
-
-  const syncedByExternalId = new Map<string, Document>()
-  for (const d of documents) {
-    if (d.external_document_id) {
-      syncedByExternalId.set(d.external_document_id, d)
-    }
-  }
 
   const showTenderNedCatalog = tnsDocuments !== null
   const manualDocuments = showTenderNedCatalog
@@ -183,7 +197,6 @@ export default async function TenderDetailPage({
             redirectTo="/dashboard/tenders"
           />
           <StartAnalysisButton tenderId={tender.id} hasAnalysis={!!analysis} />
-          {analysis && <GeneratePdfButton tenderId={tender.id} />}
         </div>
       </div>
 
@@ -213,10 +226,18 @@ export default async function TenderDetailPage({
           {/* Analysis */}
           {analysis ? (
             <div>
-              <h2 className="text-lg font-semibold font-grotesk text-foreground mb-4 flex items-center gap-2">
-                <Brain className="w-5 h-5 text-blue-light" />
-                AI Analyse
-              </h2>
+              <div className="flex flex-col gap-4 mb-4">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <h2 className="text-lg font-semibold font-grotesk text-foreground flex items-center gap-2 shrink-0">
+                    <Brain className="w-5 h-5 text-blue-light" />
+                    AI Analyse
+                  </h2>
+                  <AnalysisActionsToolbar
+                    tenderId={tender.id}
+                    mailEnabled={mailEnabled}
+                  />
+                </div>
+              </div>
               <AnalysisPanel analysis={analysis} />
             </div>
           ) : (
@@ -270,12 +291,13 @@ export default async function TenderDetailPage({
               </p>
             )}
 
-            {showTenderNedCatalog && tnsDocuments && (
-              <TenderNedBijlagenCatalog
-                documents={tnsDocuments}
-                syncedByExternalId={syncedByExternalId}
-              />
-            )}
+            <TenderDocumentsLiveSection
+              tenderId={tender.id}
+              showTenderNedCatalog={showTenderNedCatalog}
+              tnsDocuments={tnsDocuments}
+              initialDocuments={documents}
+              manualDocuments={manualDocuments}
+            />
 
             <TenderNedBijlagenToolbar
               tenderId={tender.id}
@@ -285,74 +307,6 @@ export default async function TenderDetailPage({
             />
 
             <FileUpload tenderId={tender.id} />
-
-            {manualDocuments.length > 0 && (
-              <ul className="mt-4 space-y-2 list-none p-0 m-0" aria-label="Lijst van bijlagen">
-                {showTenderNedCatalog && (
-                  <li className="list-none mb-2">
-                    <p className="text-xs font-medium text-muted uppercase tracking-wide">
-                      Handmatig geüpload
-                    </p>
-                  </li>
-                )}
-                {manualDocuments.map((doc) => {
-                  const { title, extension } = filenameTitleAndExtension(
-                    doc.name,
-                    doc.type
-                  )
-                  return (
-                    <li key={doc.id}>
-                      <div className="card flex items-center gap-3 p-3">
-                        <span className="text-lg" aria-hidden="true">
-                          {fileTypeIcon(doc.type)}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                            <p className="text-sm text-foreground truncate" title={doc.name}>
-                              {title}
-                            </p>
-                            {extension ? (
-                              <Badge variant="neutral" className="font-mono text-xs shrink-0">
-                                .{extension}
-                              </Badge>
-                            ) : (
-                              <span className="text-xs text-muted shrink-0">—</span>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted mt-0.5">
-                            {formatFileSize(doc.size)} · {formatDate(doc.created_at)}
-                            {doc.source === 'tenderned' && (
-                              <span className="text-muted/80"> · TenderNed</span>
-                            )}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <a
-                            href={doc.blob_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-muted hover:text-blue-light transition-colors p-1.5 rounded-md hover:bg-muted/40"
-                            aria-label={`Bekijk ${doc.name}`}
-                            title="Bekijken"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </a>
-                          <a
-                            href={doc.blob_url}
-                            download={doc.name}
-                            className="text-muted hover:text-blue-light transition-colors p-1.5 rounded-md hover:bg-muted/40"
-                            aria-label={`Download ${doc.name}`}
-                            title="Downloaden"
-                          >
-                            <Download className="w-4 h-4" />
-                          </a>
-                        </div>
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
           </div>
         </div>
 
@@ -370,7 +324,6 @@ export default async function TenderDetailPage({
           <div className="flex-1 min-h-0">
             <ChatInterface
               tenderId={tender.id}
-              placeholder={`Vraag iets over "${tender.title}"...`}
               initialContext={
                 `Tender: ${tender.title}\n` +
                 `Aanbestedende dienst: ${tender.contracting_authority ?? 'onbekend'}\n` +

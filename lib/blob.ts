@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { put, del, list } from '@vercel/blob'
 
 /** Vereist voor uploads (Vercel zet dit automatisch bij Blob-store; lokaal: token in .env.local). */
@@ -21,7 +22,7 @@ export async function uploadFile(
   folder: string = 'uploads'
 ): Promise<UploadedFile> {
   assertBlobWriteToken()
-  const filename = `${folder}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+  const filename = `${folder}/${Date.now()}-${randomUUID()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
 
   const blob = await put(filename, file, {
     access: 'public',
@@ -43,7 +44,7 @@ export async function uploadBuffer(
   folder: string = 'exports'
 ): Promise<UploadedFile> {
   assertBlobWriteToken()
-  const pathname = `${folder}/${Date.now()}-${filename}`
+  const pathname = `${folder}/${Date.now()}-${randomUUID()}-${filename}`
 
   const blob = await put(pathname, buffer, {
     access: 'public',

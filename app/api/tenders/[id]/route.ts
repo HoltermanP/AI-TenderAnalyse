@@ -139,7 +139,8 @@ export async function DELETE(
     }
 
     const docUrls = (await sql`
-      SELECT blob_url FROM documents WHERE tender_id = ${id}
+      SELECT blob_url FROM documents
+      WHERE tender_id = ${id} AND blob_url IS NOT NULL
     `) as { blob_url: string }[]
     const pdfUrls = (await sql`
       SELECT blob_url FROM pdf_exports WHERE tender_id = ${id}

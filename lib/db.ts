@@ -73,16 +73,25 @@ export interface ChatMessage {
   created_at: string
 }
 
+/** TenderNed → Blob: downloading / synced / failed; uploads: synced */
+export type DocumentBlobStatus = 'synced' | 'downloading' | 'failed'
+
+/** AI-samenvatting voor analyse: pending → processing → done | failed */
+export type DocumentSummaryStatus = 'pending' | 'processing' | 'done' | 'failed'
+
 export interface Document {
   id: string
   tender_id: string | null
   name: string
   type: string
   size: number
-  blob_url: string
+  /** Null zolang TenderNed-download naar Blob nog bezig is */
+  blob_url: string | null
   summary: string | null
   source: 'upload' | 'tenderned' | 'company'
   external_document_id: string | null
+  blob_status: DocumentBlobStatus
+  summary_status: DocumentSummaryStatus
   created_at: string
 }
 

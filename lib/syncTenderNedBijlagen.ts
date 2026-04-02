@@ -15,9 +15,6 @@ const TENDERNED_DOWNLOAD_UA =
 
 const FETCH_DOC_TIMEOUT_MS = 120_000
 
-/** Twee gelijktijdige downloads om serverless-limieten te respecteren. */
-const DOWNLOAD_CONCURRENCY = 2
-
 function downloadSignal(): AbortSignal | undefined {
   if (
     typeof AbortSignal !== 'undefined' &&
@@ -26,6 +23,56 @@ function downloadSignal(): AbortSignal | undefined {
     return AbortSignal.timeout(FETCH_DOC_TIMEOUT_MS)
   }
   return undefined
+}
+
+function getDownloadHref(doc: TnsPublicationDocument): string | null {
+  const href = doc.links?.download?.href?.trim()
+  return href || null
+}
+
+async function downloadTenderNedBinary(
+  assetUrl: string
+): Promise<{ buffer: Buffer } | { error: string }> {
+  const headers: Record<string, string> = {
+    'User-Agent': TENDERNED_DOWNLOAD_UA,
+    Accept: '*/*',
+    Referer: 'https://www.tenderned.nl/',
+  }
+
+  let lastErr = 'Download mislukt'
+  const maxAttempts = 4
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 400 * attempt))
+    }
+    try {
+      const res = await fetch(assetUrl, {
+        redirect: 'follow',
+        headers,
+        signal: downloadSignal(),
+      })
+      if (res.ok) {
+        const ab = await res.arrayBuffer()
+        return { buffer: Buffer.from(ab) }
+      }
+      lastErr = `HTTP ${res.status}`
+      if (res.status === 429 || res.status >= 500) {
+        continue
+      }
+      return { error: lastErr }
+    } catch (e) {
+      let message = e instanceof Error ? e.message : 'fetch mislukt'
+      if (/aborted|AbortError|timeout/i.test(message)) {
+        return {
+          error: `Download timeout (${FETCH_DOC_TIMEOUT_MS / 1000}s) of verbinding verbroken`,
+        }
+      }
+      lastErr = message
+    }
+  }
+
+  return { error: lastErr }
 }
 
 export function buildDocumentFileName(
@@ -53,17 +100,15 @@ async function syncOneDocument(
   if (doc.virusIndicatie === true) {
     return { kind: 'skipped' }
   }
-  const href = doc.links?.download?.href
-  if (!href) {
+
+  const externalId =
+    doc.documentId != null ? String(doc.documentId).trim() : ''
+  if (!externalId) {
     return { kind: 'skipped' }
   }
 
-  const existing = await sql`
-    SELECT id FROM documents
-    WHERE tender_id = ${tenderId} AND external_document_id = ${doc.documentId}
-    LIMIT 1
-  `
-  if (existing.length > 0) {
+  const href = getDownloadHref(doc)
+  if (!href) {
     return { kind: 'skipped' }
   }
 
@@ -71,35 +116,75 @@ async function syncOneDocument(
   const fileName = buildDocumentFileName(naamFallback, typeCode)
   const mime = mimeTypeFromTnsDocumentType(typeCode)
 
-  let buffer: Buffer
-  try {
-    const assetUrl = resolveTenderNedAssetUrl(href)
-    const res = await fetch(assetUrl, {
-      redirect: 'follow',
-      headers: {
-        'User-Agent': TENDERNED_DOWNLOAD_UA,
-        Accept: '*/*',
-      },
-      signal: downloadSignal(),
-    })
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`)
+  const existingRows = await sql`
+    SELECT id, blob_url, blob_status FROM documents
+    WHERE tender_id = ${tenderId} AND external_document_id = ${externalId}
+    LIMIT 1
+  `
+  let docId: string
+  if (existingRows.length > 0) {
+    const ex = existingRows[0] as {
+      id: string
+      blob_url: string | null
+      blob_status: string
     }
-    const ab = await res.arrayBuffer()
-    buffer = Buffer.from(ab)
-  } catch (e) {
-    let message = e instanceof Error ? e.message : 'fetch mislukt'
-    if (/aborted|AbortError|timeout/i.test(message)) {
-      message = `Download timeout (${FETCH_DOC_TIMEOUT_MS / 1000}s) of verbinding verbroken`
+    if (ex.blob_url && ex.blob_status === 'synced') {
+      return { kind: 'skipped' }
     }
-    return { kind: 'err', documentNaam: naamFallback, error: message }
+    docId = ex.id
+    await sql`
+      UPDATE documents
+      SET blob_status = 'downloading', name = ${fileName}, type = ${mime}
+      WHERE id = ${docId}
+    `
+  } else {
+    const inserted = await sql`
+      INSERT INTO documents (
+        tender_id, name, type, size, blob_url, source, external_document_id,
+        blob_status, summary_status
+      ) VALUES (
+        ${tenderId},
+        ${fileName},
+        ${mime},
+        ${0},
+        ${null},
+        'tenderned',
+        ${externalId},
+        'downloading',
+        'pending'
+      )
+      RETURNING id
+    `
+    docId = (inserted[0] as { id: string }).id
   }
 
+  const assetUrl = resolveTenderNedAssetUrl(href)
+  const dl = await downloadTenderNedBinary(assetUrl)
+  if ('error' in dl) {
+    await sql`
+      UPDATE documents
+      SET blob_status = 'failed',
+          summary = ${`[Download mislukt: ${dl.error} — ${fileName}]`},
+          summary_status = 'failed'
+      WHERE id = ${docId}
+    `
+    return { kind: 'err', documentNaam: naamFallback, error: dl.error }
+  }
+  const buffer = dl.buffer
+
   if (buffer.length > TENDERNED_SYNC_MAX_BYTES) {
+    const errText = `Bestand groter dan ${Math.round(TENDERNED_SYNC_MAX_BYTES / (1024 * 1024))} MB`
+    await sql`
+      UPDATE documents
+      SET blob_status = 'failed',
+          summary = ${`[${errText} — ${fileName}]`},
+          summary_status = 'failed'
+      WHERE id = ${docId}
+    `
     return {
       kind: 'err',
       documentNaam: naamFallback,
-      error: `Bestand groter dan ${Math.round(TENDERNED_SYNC_MAX_BYTES / (1024 * 1024))} MB`,
+      error: errText,
     }
   }
 
@@ -113,24 +198,28 @@ async function syncOneDocument(
     )
 
     await sql`
-      INSERT INTO documents (
-        tender_id, name, type, size, blob_url, source, external_document_id
-      ) VALUES (
-        ${tenderId},
-        ${fileName},
-        ${mime},
-        ${uploaded.size},
-        ${uploaded.url},
-        'tenderned',
-        ${doc.documentId}
-      )
+      UPDATE documents
+      SET blob_url = ${uploaded.url},
+          size = ${uploaded.size},
+          blob_status = 'synced',
+          summary = ${null},
+          summary_status = 'pending'
+      WHERE id = ${docId}
     `
     return { kind: 'added' }
   } catch (e) {
+    const message = e instanceof Error ? e.message : 'upload mislukt'
+    await sql`
+      UPDATE documents
+      SET blob_status = 'failed',
+          summary = ${`[Upload naar opslag mislukt: ${message} — ${fileName}]`},
+          summary_status = 'failed'
+      WHERE id = ${docId}
+    `
     return {
       kind: 'err',
       documentNaam: naamFallback,
-      error: e instanceof Error ? e.message : 'upload mislukt',
+      error: message,
     }
   }
 }
@@ -161,16 +250,11 @@ export async function syncTenderNedBijlagenToBlob(input: {
   let skipped = 0
   const errors: { documentNaam: string; error: string }[] = []
 
-  for (let i = 0; i < listed.length; i += DOWNLOAD_CONCURRENCY) {
-    const batch = listed.slice(i, i + DOWNLOAD_CONCURRENCY)
-    const outcomes = await Promise.all(
-      batch.map((doc) => syncOneDocument(doc, tenderId))
-    )
-    for (const o of outcomes) {
-      if (o.kind === 'added') added++
-      else if (o.kind === 'skipped') skipped++
-      else errors.push({ documentNaam: o.documentNaam, error: o.error })
-    }
+  for (const d of listed) {
+    const o = await syncOneDocument(d, tenderId)
+    if (o.kind === 'added') added++
+    else if (o.kind === 'skipped') skipped++
+    else errors.push({ documentNaam: o.documentNaam, error: o.error })
   }
 
   return {
