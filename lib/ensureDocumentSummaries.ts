@@ -6,7 +6,7 @@ import { extractTextFromBuffer } from '@/lib/extractDocumentText'
 
 const TEXT_SLICE = 24_000
 /** Parallelle AI-samenvattingen (sneller binnen serverless-limiet) */
-const TENDER_SUMMARY_CONCURRENCY = 3
+const SUMMARY_CONCURRENCY = 3
 
 function hasUsableSummary(summary: string | null | undefined): boolean {
   if (!summary) return false
@@ -51,7 +51,7 @@ async function summariseOneTenderDoc(
   const raw = await extractTextFromBuffer(buffer, doc.type, doc.name)
   let summary: string
 
-  if (raw && raw.replace(/\s/g, '').length > 80) {
+  if (raw) {
     const slice = raw.length > TEXT_SLICE ? raw.slice(0, TEXT_SLICE) : raw
     try {
       summary = await summariseDocument(slice)
@@ -93,10 +93,66 @@ export async function ensureDocumentSummariesForTender(tenderId: string): Promis
       d.blob_status === 'synced'
   )
 
-  for (let i = 0; i < pending.length; i += TENDER_SUMMARY_CONCURRENCY) {
-    const batch = pending.slice(i, i + TENDER_SUMMARY_CONCURRENCY)
+  for (let i = 0; i < pending.length; i += SUMMARY_CONCURRENCY) {
+    const batch = pending.slice(i, i + SUMMARY_CONCURRENCY)
     await Promise.all(batch.map((doc) => summariseOneTenderDoc(doc)))
   }
+}
+
+async function summariseOneCompanyDoc(
+  doc: Pick<Document, 'id' | 'name' | 'type' | 'blob_url' | 'summary' | 'blob_status'>
+): Promise<void> {
+  await sql`
+    UPDATE documents SET summary_status = 'processing' WHERE id = ${doc.id}
+  `
+
+  let buffer: Buffer
+  try {
+    const res = await fetch(getDownloadUrl(doc.blob_url!), {
+      redirect: 'follow',
+    })
+    if (!res.ok) {
+      await sql`
+        UPDATE documents
+        SET summary = ${`[Blob niet bereikbaar (HTTP ${res.status}) — ${doc.name}]`},
+            summary_status = 'failed'
+        WHERE id = ${doc.id}
+      `
+      return
+    }
+    const ab = await res.arrayBuffer()
+    buffer = Buffer.from(ab)
+  } catch {
+    await sql`
+      UPDATE documents
+      SET summary = ${`[Download van blob mislukt — ${doc.name}]`},
+          summary_status = 'failed'
+      WHERE id = ${doc.id}
+    `
+    return
+  }
+
+  const raw = await extractTextFromBuffer(buffer, doc.type, doc.name)
+  let summary: string
+
+  if (raw) {
+    const slice = raw.length > TEXT_SLICE ? raw.slice(0, TEXT_SLICE) : raw
+    try {
+      summary = await summariseCompanyProfileDocument(slice)
+    } catch {
+      summary = `[Samenvatting mislukt — bestand: ${doc.name}]`
+    }
+  } else {
+    summary = `[Geen leesbare tekst geëxtraheerd — bestand: ${doc.name} (${doc.type})]`
+  }
+
+  const summaryOk = hasUsableSummary(summary)
+  await sql`
+    UPDATE documents
+    SET summary = ${summary},
+        summary_status = ${summaryOk ? 'done' : 'failed'}
+    WHERE id = ${doc.id}
+  `
 }
 
 /**
@@ -113,54 +169,15 @@ export async function ensureCompanyDocumentSummaries(): Promise<void> {
     'id' | 'name' | 'type' | 'blob_url' | 'summary' | 'blob_status'
   >[]
 
-  for (const doc of docs) {
-    if (hasUsableSummary(doc.summary)) continue
-    if (!doc.blob_url || doc.blob_status !== 'synced') continue
+  const pending = docs.filter(
+    (d) =>
+      !hasUsableSummary(d.summary) &&
+      d.blob_url &&
+      d.blob_status === 'synced'
+  )
 
-    await sql`
-      UPDATE documents SET summary_status = 'processing' WHERE id = ${doc.id}
-    `
-
-    let buffer: Buffer
-    try {
-      const res = await fetch(getDownloadUrl(doc.blob_url), {
-        redirect: 'follow',
-      })
-      if (!res.ok) {
-        await sql`
-          UPDATE documents SET summary_status = 'failed' WHERE id = ${doc.id}
-        `
-        continue
-      }
-      const ab = await res.arrayBuffer()
-      buffer = Buffer.from(ab)
-    } catch {
-      await sql`
-        UPDATE documents SET summary_status = 'failed' WHERE id = ${doc.id}
-      `
-      continue
-    }
-
-    const raw = await extractTextFromBuffer(buffer, doc.type, doc.name)
-    let summary: string
-
-    if (raw && raw.replace(/\s/g, '').length > 80) {
-      const slice = raw.length > TEXT_SLICE ? raw.slice(0, TEXT_SLICE) : raw
-      try {
-        summary = await summariseCompanyProfileDocument(slice)
-      } catch {
-        summary = `[Samenvatting mislukt — bestand: ${doc.name}]`
-      }
-    } else {
-      summary = `[Geen leesbare tekst geëxtraheerd — bestand: ${doc.name} (${doc.type})]`
-    }
-
-    const summaryOk = hasUsableSummary(summary)
-    await sql`
-      UPDATE documents
-      SET summary = ${summary},
-          summary_status = ${summaryOk ? 'done' : 'failed'}
-      WHERE id = ${doc.id}
-    `
+  for (let i = 0; i < pending.length; i += SUMMARY_CONCURRENCY) {
+    const batch = pending.slice(i, i + SUMMARY_CONCURRENCY)
+    await Promise.all(batch.map((doc) => summariseOneCompanyDoc(doc)))
   }
 }

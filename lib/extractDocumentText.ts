@@ -1,5 +1,7 @@
 const MAX_CHARS = 500_000
-const MIN_TEXT_CHARS = 20
+
+/** Minimale tekstlengte na extractie; gelijk aan drempel in extractiepaden hieronder. */
+export const MIN_EXTRACTED_TEXT_CHARS = 20
 
 function normalize(value: string | null | undefined): string {
   return (value ?? '').trim().toLowerCase()
@@ -75,7 +77,9 @@ export async function extractTextFromBuffer(
   if (kind === 'text') {
     try {
       const text = buffer.toString('utf-8').replace(/\u0000/g, '').trim()
-      return text.length >= MIN_TEXT_CHARS ? text.slice(0, MAX_CHARS) : null
+      return text.length >= MIN_EXTRACTED_TEXT_CHARS ?
+          text.slice(0, MAX_CHARS)
+        : null
     } catch {
       return null
     }
@@ -89,7 +93,9 @@ export async function extractTextFromBuffer(
       parser = new PDFParse({ data: new Uint8Array(buffer) })
       const data = await parser.getText()
       const text = data.text?.trim()
-      return text && text.length >= MIN_TEXT_CHARS ? text.slice(0, MAX_CHARS) : null
+      return text && text.length >= MIN_EXTRACTED_TEXT_CHARS ?
+          text.slice(0, MAX_CHARS)
+        : null
     } catch {
       return null
     } finally {
@@ -108,7 +114,9 @@ export async function extractTextFromBuffer(
       const mammoth = await import('mammoth')
       const result = await mammoth.extractRawText({ buffer })
       const text = result.value?.trim()
-      return text && text.length >= MIN_TEXT_CHARS ? text.slice(0, MAX_CHARS) : null
+      return text && text.length >= MIN_EXTRACTED_TEXT_CHARS ?
+          text.slice(0, MAX_CHARS)
+        : null
     } catch {
       return null
     }
@@ -124,7 +132,9 @@ export async function extractTextFromBuffer(
         if (sheet) parts.push(XLSX.utils.sheet_to_csv(sheet))
       }
       const joined = parts.join('\n\n').trim()
-      return joined && joined.length >= MIN_TEXT_CHARS ? joined.slice(0, MAX_CHARS) : null
+      return joined && joined.length >= MIN_EXTRACTED_TEXT_CHARS ?
+          joined.slice(0, MAX_CHARS)
+        : null
     } catch {
       return null
     }

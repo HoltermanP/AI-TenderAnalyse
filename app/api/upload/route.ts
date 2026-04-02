@@ -6,7 +6,10 @@ import {
   summariseCompanyProfileDocument,
   summariseDocument,
 } from '@/lib/anthropic'
-import { extractTextFromBuffer } from '@/lib/extractDocumentText'
+import {
+  extractTextFromBuffer,
+  MIN_EXTRACTED_TEXT_CHARS,
+} from '@/lib/extractDocumentText'
 
 const TEXT_SLICE = 24_000
 
@@ -17,10 +20,13 @@ async function summaryFromUploadedFile(
   try {
     const buf = Buffer.from(await file.arrayBuffer())
     const raw = await extractTextFromBuffer(buf, file.type, file.name)
-    if (!raw || raw.replace(/\s/g, '').length < 80) {
+    if (!raw) {
       if (file.type === 'text/plain') {
-        const text = buf.toString('utf-8')
-        if (text.length > 100) {
+        const text = buf
+          .toString('utf-8')
+          .replace(/\u0000/g, '')
+          .trim()
+        if (text.length >= MIN_EXTRACTED_TEXT_CHARS) {
           const slice = text.length > TEXT_SLICE ? text.slice(0, TEXT_SLICE) : text
           return kind === 'company'
             ? await summariseCompanyProfileDocument(slice)
