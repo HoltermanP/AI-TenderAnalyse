@@ -3,16 +3,41 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { z } from 'zod'
 
+/** Lege of domein-zonder-schema → leeg of https-URL voor Zod `.url()`. */
+function preprocessWebsite(val: unknown): string {
+  if (val == null) return ''
+  const t = String(val).trim()
+  if (!t) return ''
+  const withScheme = /^https?:\/\//i.test(t) ? t : `https://${t}`
+  return withScheme
+}
+
 const CompanyInfoSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().min(1, 'Bedrijfsnaam is verplicht'),
   description: z.string().optional(),
   strengths: z.array(z.string()).optional(),
   certifications: z.array(z.string()).optional(),
   sectors: z.array(z.string()).optional(),
   revenue_range: z.string().optional(),
   employee_count: z.string().optional(),
-  founded_year: z.coerce.number().optional().or(z.literal('')),
-  website: z.string().url().optional().or(z.literal('')),
+  founded_year: z.preprocess((val) => {
+    if (val === '' || val === null || val === undefined) return undefined
+    const n = Number(String(val).replace(/\s/g, ''))
+    if (!Number.isFinite(n)) return undefined
+    const y = Math.trunc(n)
+    if (y < 1000 || y > 2100) return undefined
+    return y
+  }, z.number().int().optional()),
+  website: z.preprocess(
+    preprocessWebsite,
+    z.union([
+      z.literal(''),
+      z.string().url({
+        message:
+          'Ongeldige website. Gebruik een domein (bijv. mijnbedrijf.nl) of volledige URL (https://…).',
+      }),
+    ])
+  ),
   kvk_number: z.string().optional(),
   legal_form: z.string().optional(),
   address_line: z.string().optional(),
@@ -31,7 +56,8 @@ const CompanyInfoSchema = z.object({
 
 export async function GET() {
   try {
-    const rows = await sql`SELECT * FROM company_info LIMIT 1`
+    const rows =
+      await sql`SELECT * FROM company_info ORDER BY updated_at DESC NULLS LAST LIMIT 1`
     return NextResponse.json(rows[0] ?? null)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Database error'
@@ -71,7 +97,7 @@ export async function PUT(request: NextRequest) {
         differentiators = ${data.differentiators ?? null},
         strategic_notes = ${data.strategic_notes ?? null},
         updated_at = NOW()
-      WHERE id = (SELECT id FROM company_info LIMIT 1)
+      WHERE id = (SELECT id FROM company_info ORDER BY updated_at DESC NULLS LAST LIMIT 1)
       RETURNING *
     `
 
@@ -116,7 +142,9 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(rows[0])
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: err.errors[0].message }, { status: 400 })
+      const e = err.errors[0]
+      const path = e.path.length ? `${e.path.join('.')}: ` : ''
+      return NextResponse.json({ error: `${path}${e.message}` }, { status: 400 })
     }
     const message = err instanceof Error ? err.message : 'Database error'
     return NextResponse.json({ error: message }, { status: 500 })

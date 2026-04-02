@@ -89,7 +89,8 @@ export async function POST(request: NextRequest) {
     await ensureDocumentSummariesForTender(tenderId)
 
     // Fetch company info
-    const companyRows = await sql`SELECT * FROM company_info LIMIT 1`
+    const companyRows =
+      await sql`SELECT * FROM company_info ORDER BY updated_at DESC NULLS LAST LIMIT 1`
     const companyRow = (companyRows[0] as CompanyInfo | undefined) ?? {
       name: 'Mijn Bedrijf',
       description: '',

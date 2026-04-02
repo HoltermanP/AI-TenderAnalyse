@@ -60,6 +60,22 @@ const EMPTY_COMPANY: CompanyInfo = {
   strategic_notes: '',
 }
 
+/** API (Postgres) kan `founded_year` als getal serialiseren. */
+function stateFromApiJson(json: Partial<CompanyInfo> | null): CompanyInfo {
+  if (!json) return { ...EMPTY_COMPANY }
+  const raw = json.founded_year as string | number | null | undefined
+  const founded_year = raw == null || raw === '' ? '' : String(raw)
+  return {
+    ...EMPTY_COMPANY,
+    ...json,
+    founded_year,
+    strengths: json.strengths ?? [],
+    certifications: json.certifications ?? [],
+    sectors: json.sectors ?? [],
+    cpv_focus: json.cpv_focus ?? [],
+  }
+}
+
 function TagInput({
   label,
   value,
@@ -137,15 +153,8 @@ export default function BedrijfsinfoPage() {
       try {
         const res = await fetch('/api/bedrijfsinfo')
         if (res.ok) {
-          const json = (await res.json()) as Partial<CompanyInfo>
-          setData({
-            ...EMPTY_COMPANY,
-            ...json,
-            strengths: json.strengths ?? [],
-            certifications: json.certifications ?? [],
-            sectors: json.sectors ?? [],
-            cpv_focus: json.cpv_focus ?? [],
-          })
+          const json = (await res.json()) as Partial<CompanyInfo> | null
+          setData(stateFromApiJson(json))
         }
       } catch {
         // ignore
@@ -173,6 +182,9 @@ export default function BedrijfsinfoPage() {
         const err = (await res.json()) as { error?: string }
         throw new Error(err.error ?? 'Opslaan mislukt')
       }
+
+      const saved = (await res.json()) as Partial<CompanyInfo>
+      setData(stateFromApiJson(saved))
 
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)

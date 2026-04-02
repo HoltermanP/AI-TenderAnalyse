@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
     }
     const analysis = analysisRows[0] as Analysis
 
-    const companyRows = await sql`SELECT name FROM company_info LIMIT 1`
+    const companyRows =
+      await sql`SELECT name FROM company_info ORDER BY updated_at DESC NULLS LAST LIMIT 1`
     const companyName =
       (companyRows[0] as { name?: string } | undefined)?.name ?? 'Mijn bedrijf'
 

@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
     const analysisRows = await sql`SELECT * FROM analyses WHERE tender_id = ${tenderId}`
     const analysis = (analysisRows[0] as Analysis) ?? null
 
-    const companyRows = await sql`SELECT * FROM company_info LIMIT 1`
+    const companyRows =
+      await sql`SELECT * FROM company_info ORDER BY updated_at DESC NULLS LAST LIMIT 1`
     const company =
       (companyRows[0] as CompanyInfo) ??
       ({ name: 'Mijn Bedrijf' } as CompanyInfo)
