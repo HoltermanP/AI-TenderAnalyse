@@ -11,7 +11,7 @@ import {
 export const TENDERNED_SYNC_MAX_BYTES = 50 * 1024 * 1024
 
 const TENDERNED_DOWNLOAD_UA =
-  'AI-TenderAnalyse/1.0 (TenderNed-bijlagen; openbare documenten)'
+  'Mozilla/5.0 (compatible; AI-TenderAnalyse/1.0; +https://www.tenderned.nl)'
 
 const FETCH_DOC_TIMEOUT_MS = 120_000
 
@@ -35,16 +35,18 @@ async function downloadTenderNedBinary(
 ): Promise<{ buffer: Buffer } | { error: string }> {
   const headers: Record<string, string> = {
     'User-Agent': TENDERNED_DOWNLOAD_UA,
-    Accept: '*/*',
+    Accept: 'application/pdf,application/zip,application/msword,application/vnd.openxmlformats-officedocument.*,*/*;q=0.8',
+    'Accept-Language': 'nl-NL,nl;q=0.9,en;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
     Referer: 'https://www.tenderned.nl/',
   }
 
   let lastErr = 'Download mislukt'
-  const maxAttempts = 4
+  const maxAttempts = 5
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, 400 * attempt))
+      await new Promise((r) => setTimeout(r, 600 * attempt))
     }
     try {
       const res = await fetch(assetUrl, {
@@ -57,7 +59,8 @@ async function downloadTenderNedBinary(
         return { buffer: Buffer.from(ab) }
       }
       lastErr = `HTTP ${res.status}`
-      if (res.status === 429 || res.status >= 500) {
+      // Retry op server-/rate-limit-fouten en 404 (document soms nog niet gereed bij TenderNed)
+      if (res.status === 429 || res.status === 404 || res.status >= 500) {
         continue
       }
       return { error: lastErr }
@@ -236,6 +239,20 @@ export async function syncTenderNedBijlagenToBlob(input: {
   const { tenderId, publicatieId } = input
   assertBlobWriteToken()
 
+  /**
+   * Reset documenten die in een vorige (getimede-out) run op 'downloading' zijn blijven staan.
+   * Zonder reset worden ze in syncOneDocument overgeslagen omdat ze al een status hebben,
+   * maar ze zijn niet gesynchroniseerd → analyse mist ze.
+   */
+  await sql`
+    UPDATE documents
+    SET blob_status = 'failed',
+        summary = '[Vorige downloadpoging niet voltooid — wordt opnieuw geprobeerd]',
+        summary_status = 'failed'
+    WHERE tender_id = ${tenderId}
+      AND blob_status = 'downloading'
+  `
+
   const listed = await fetchPublicationDocumenten(publicatieId, {
     cache: 'no-store',
   })
@@ -250,8 +267,8 @@ export async function syncTenderNedBijlagenToBlob(input: {
   let skipped = 0
   const errors: { documentNaam: string; error: string }[] = []
 
-  /** Parallelle downloads (download + upload naar blob tegelijk, max 5 gelijktijdig). */
-  const SYNC_CONCURRENCY = 5
+  /** Parallelle downloads (max 3 gelijktijdig om TenderNed niet te overbelasten en OOM te voorkomen). */
+  const SYNC_CONCURRENCY = 3
   for (let i = 0; i < listed.length; i += SYNC_CONCURRENCY) {
     const batch = listed.slice(i, i + SYNC_CONCURRENCY)
     const results = await Promise.all(batch.map((d) => syncOneDocument(d, tenderId)))

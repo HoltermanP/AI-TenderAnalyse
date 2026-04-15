@@ -24,15 +24,17 @@ function summaryEntryForAnalysis(
   summary: string | null | undefined,
   onBlobSynced: boolean
 ): { name: string; summary: string } {
+  // Bruikbare samenvatting heeft altijd prioriteit, ongeacht blob-status.
+  // Zo werken ook direct-samengevatte documenten waarbij blob-upload mislukte.
+  if (summary != null && summaryIsUsableForAnalysis(summary)) {
+    return { name, summary }
+  }
   if (!onBlobSynced) {
     return {
       name,
       summary:
         'Niet beschikbaar als volledige bijlage in opslag (sync mislukt of nog bezig). Zie documentdekking.',
     }
-  }
-  if (summary != null && summaryIsUsableForAnalysis(summary)) {
-    return { name, summary }
   }
   const fallback = summary?.trim()
   if (fallback) {
