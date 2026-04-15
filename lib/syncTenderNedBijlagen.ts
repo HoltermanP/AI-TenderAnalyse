@@ -250,11 +250,16 @@ export async function syncTenderNedBijlagenToBlob(input: {
   let skipped = 0
   const errors: { documentNaam: string; error: string }[] = []
 
-  for (const d of listed) {
-    const o = await syncOneDocument(d, tenderId)
-    if (o.kind === 'added') added++
-    else if (o.kind === 'skipped') skipped++
-    else errors.push({ documentNaam: o.documentNaam, error: o.error })
+  /** Parallelle downloads (download + upload naar blob tegelijk, max 5 gelijktijdig). */
+  const SYNC_CONCURRENCY = 5
+  for (let i = 0; i < listed.length; i += SYNC_CONCURRENCY) {
+    const batch = listed.slice(i, i + SYNC_CONCURRENCY)
+    const results = await Promise.all(batch.map((d) => syncOneDocument(d, tenderId)))
+    for (const o of results) {
+      if (o.kind === 'added') added++
+      else if (o.kind === 'skipped') skipped++
+      else errors.push({ documentNaam: o.documentNaam, error: o.error })
+    }
   }
 
   return {

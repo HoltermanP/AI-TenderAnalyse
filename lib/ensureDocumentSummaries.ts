@@ -10,9 +10,9 @@ import {
 import { extractTextFromBuffer, isPdfDocument } from '@/lib/extractDocumentText'
 
 /** Ruim genoeg voor leidraad + PvE in één samenvatting-aanroep (na ZIP-samenvoeging). */
-const TEXT_SLICE = 100_000
+const TEXT_SLICE = 300_000
 /** Parallelle AI-samenvattingen (sneller binnen serverless-limiet) */
-const SUMMARY_CONCURRENCY = 3
+const SUMMARY_CONCURRENCY = 5
 
 function hasUsableSummary(summary: string | null | undefined): boolean {
   if (!summary) return false
