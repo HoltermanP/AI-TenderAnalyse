@@ -14,7 +14,7 @@ import {
   MIN_EXTRACTED_TEXT_CHARS,
 } from '@/lib/extractDocumentText'
 
-const TEXT_SLICE = 100_000
+const TEXT_SLICE = 300_000
 
 async function summaryFromUploadedFile(
   file: File,

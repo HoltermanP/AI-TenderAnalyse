@@ -299,6 +299,47 @@ export function isPdfDocument(buffer: Buffer, mime: string, fileName: string): b
   return detectFileKind(buffer, mime, fileName) === 'pdf'
 }
 
+export function isZipBuffer(buffer: Buffer): boolean {
+  return isPkZipLocalHeader(buffer)
+}
+
+/**
+ * Extraheert de eerste 'belangrijke' PDF uit een ZIP-bundel (gesorteerd op relevantie).
+ * Bruikbaar als vision-fallback voor ZIP-bijlagen die geen leesbare tekst bevatten
+ * (bijv. bundels met gescande PDFs).
+ * Geeft null terug als de ZIP geen PDFs bevat of niet geopend kan worden.
+ */
+export async function extractFirstPdfFromZip(buffer: Buffer): Promise<Buffer | null> {
+  if (!isPkZipLocalHeader(buffer)) return null
+  try {
+    const JSZip = (await import('jszip')).default
+    const zip = await JSZip.loadAsync(buffer)
+
+    const pdfPaths: string[] = []
+    zip.forEach((relativePath, entry) => {
+      if (entry.dir) return
+      const normalized = normalizeZipEntryPath(relativePath)
+      if (!normalized) return
+      if (normalized.toLowerCase().endsWith('.pdf')) {
+        pdfPaths.push(normalized)
+      }
+    })
+
+    if (!pdfPaths.length) return null
+
+    // Sorteer op relevantie (leidraad/pve vóór overige bijlagen)
+    pdfPaths.sort((a, b) => tenderInnerFileSortScore(b) - tenderInnerFileSortScore(a))
+
+    const entry = zip.file(pdfPaths[0])
+    if (!entry) return null
+
+    const data = await entry.async('uint8array')
+    return Buffer.from(data)
+  } catch {
+    return null
+  }
+}
+
 /**
  * Haalt platte tekst uit tenderbijlagen: PDF, Office, plain text, ZIP-bundels (TenderNed), OpenDocument.
  * PDF: eerst tekstlaag (pdf-parse), daarna OCR (Tesseract) op gerenderde pagina’s als tekst te kort ontbreekt.
@@ -351,6 +392,13 @@ export async function extractTextFromBuffer(
       if (plain.length >= MIN_EXTRACTED_TEXT_CHARS) {
         return plain.slice(0, MAX_CHARS)
       }
+
+      /**
+       * OCR (Tesseract) kost veel geheugen en CPU. Voor geneste PDFs (in een ZIP-bundel)
+       * slaan we OCR over om OOM in serverless te voorkomen. De buitenste laag kan
+       * daarna vision-fallback gebruiken als de ZIP geen tekst opleverde.
+       */
+      if (zipDepth > 0) return null
 
       const maxOcrPages = Math.min(
         Math.max(1, Number(process.env.PDF_OCR_MAX_PAGES) || 12),

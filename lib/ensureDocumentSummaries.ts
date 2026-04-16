@@ -7,12 +7,20 @@ import {
   summariseDocument,
   summariseTenderPdfFromVision,
 } from '@/lib/anthropic'
-import { extractTextFromBuffer, isPdfDocument } from '@/lib/extractDocumentText'
+import {
+  extractTextFromBuffer,
+  isPdfDocument,
+  isZipBuffer,
+  extractFirstPdfFromZip,
+} from '@/lib/extractDocumentText'
 
 /** Ruim genoeg voor leidraad + PvE in één samenvatting-aanroep (na ZIP-samenvoeging). */
 const TEXT_SLICE = 300_000
-/** Parallelle AI-samenvattingen (sneller binnen serverless-limiet) */
-const SUMMARY_CONCURRENCY = 5
+/**
+ * Parallelle AI-samenvattingen. Bewust laag (2): iedere samenvatting kan PDF-rendering
+ * + Tesseract-OCR + Claude-call bevatten. Meer dan 2 tegelijk geeft OOM in serverless.
+ */
+const SUMMARY_CONCURRENCY = 2
 
 function hasUsableSummary(summary: string | null | undefined): boolean {
   if (!summary) return false
@@ -68,6 +76,21 @@ async function summariseOneTenderDoc(
     try {
       summary = await summariseTenderPdfFromVision(buffer)
     } catch {
+      summary = `[Geen leesbare tekst geëxtraheerd — bestand: ${doc.name} (${doc.type})]`
+    }
+  } else if (isZipBuffer(buffer)) {
+    /**
+     * ZIP-bundels met gescande PDFs leveren geen tekst op via extractTextFromBuffer.
+     * Probeer de eerste (meest relevante) PDF uit de ZIP als vision-fallback.
+     */
+    const innerPdf = await extractFirstPdfFromZip(buffer)
+    if (innerPdf) {
+      try {
+        summary = await summariseTenderPdfFromVision(innerPdf)
+      } catch {
+        summary = `[Geen leesbare tekst geëxtraheerd — bestand: ${doc.name} (${doc.type})]`
+      }
+    } else {
       summary = `[Geen leesbare tekst geëxtraheerd — bestand: ${doc.name} (${doc.type})]`
     }
   } else {
